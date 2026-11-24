@@ -3,8 +3,8 @@
 use std::slice;
 
 use crate::{
-    armpush, pointmaze, pointmaze_proc, pointpush, reacher, reacher_morph, reacher_obs, rng::Rng,
-    sokoban,
+    armpush, pointmaze, pointmaze_proc, pointpush, pusht, reacher, reacher_morph, reacher_obs,
+    rng::Rng, sokoban,
 };
 
 /// # Safety
@@ -576,4 +576,34 @@ pub unsafe extern "C" fn ms_reacher_morph_rollout(
     let traj_t1 = unsafe { slice::from_raw_parts_mut(traj_t1, horizon * n) };
     let traj_t2 = unsafe { slice::from_raw_parts_mut(traj_t2, horizon * n) };
     reacher_morph::rollout_batch(horizon, t1, t2, a1, a2, traj_t1, traj_t2);
+}
+
+/// Step a PushT state `[agent_x, agent_y, agent_vx, agent_vy, block_x, block_y, block_angle]`
+/// in place.
+///
+/// # Safety
+/// `state` must point to 7 valid `f32` elements.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_pusht_step(state: *mut f32, action_x: f32, action_y: f32) {
+    let s = unsafe { slice::from_raw_parts_mut(state, 7) };
+    let mut st = pusht::State {
+        agent_x: s[0],
+        agent_y: s[1],
+        agent_vx: s[2],
+        agent_vy: s[3],
+        block_x: s[4],
+        block_y: s[5],
+        block_angle: s[6],
+        block_vx: 0.0,
+        block_vy: 0.0,
+        block_omega: 0.0,
+    };
+    st.step_in_place(action_x, action_y);
+    s[0] = st.agent_x;
+    s[1] = st.agent_y;
+    s[2] = st.agent_vx;
+    s[3] = st.agent_vy;
+    s[4] = st.block_x;
+    s[5] = st.block_y;
+    s[6] = st.block_angle;
 }

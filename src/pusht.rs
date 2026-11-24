@@ -6,7 +6,9 @@
 //! - T-block composed of two boxes (120x30 bar + 30x90 stem), mass=1, I=3000
 //! - 10 substeps at dt=0.01 (10 Hz control) with zero damping (quasi-static).
 
-use std::f32::consts::{FRAC_PI_4, TAU};
+use std::f32::consts::{FRAC_PI_4, PI, TAU};
+
+use crate::rng::Rng;
 
 pub const ARENA: f32 = 512.0;
 pub const WALL_MIN: f32 = 7.0;
@@ -207,6 +209,80 @@ impl State {
             );
         }
         out
+    }
+
+    /// True if local-frame point `(lx, ly)` lies inside either T-block rectangle.
+    #[inline]
+    pub fn point_in_local_tee(lx: f32, ly: f32) -> bool {
+        BOXES
+            .iter()
+            .any(|&(x0, y0, x1, y1)| (x0..=x1).contains(&lx) && (y0..=y1).contains(&ly))
+    }
+
+    /// Approximate fraction of the goal T-block covered by the current T-block.
+    /// Uses a deterministic 16x16 grid over each of the two goal rectangles (512 samples).
+    pub fn coverage(&self) -> f32 {
+        let g_cos = GOAL_ANGLE.cos();
+        let g_sin = GOAL_ANGLE.sin();
+        let b_cos = self.block_angle.cos();
+        let b_sin = self.block_angle.sin();
+
+        let mut inside = 0u32;
+        let mut total = 0u32;
+        // Weight each box by its area (bar: 120*30=3600, stem: 30*90=2700 -> 4:3)
+        for &(x0, y0, x1, y1) in &BOXES {
+            let nx = ((x1 - x0) / 5.0) as usize;
+            let ny = ((y1 - y0) / 5.0) as usize;
+            let dx = (x1 - x0) / nx as f32;
+            let dy = (y1 - y0) / ny as f32;
+            for ix in 0..nx {
+                let lx = x0 + (ix as f32 + 0.5) * dx;
+                for iy in 0..ny {
+                    let ly = y0 + (iy as f32 + 0.5) * dy;
+                    let wx = GOAL_X + lx * g_cos - ly * g_sin;
+                    let wy = GOAL_Y + lx * g_sin + ly * g_cos;
+                    let rel_x = wx - self.block_x;
+                    let rel_y = wy - self.block_y;
+                    let blx = rel_x * b_cos + rel_y * b_sin;
+                    let bly = -rel_x * b_sin + rel_y * b_cos;
+                    if Self::point_in_local_tee(blx, bly) {
+                        inside += 1;
+                    }
+                    total += 1;
+                }
+            }
+        }
+        inside as f32 / total as f32
+    }
+}
+
+pub fn reset_batch(rng: &mut Rng, states: &mut [State]) {
+    for s in states.iter_mut() {
+        *s = State::new(
+            rng.uniform_f32(50.0, 450.0),
+            rng.uniform_f32(50.0, 450.0),
+            rng.uniform_f32(100.0, 400.0),
+            rng.uniform_f32(100.0, 400.0),
+            rng.uniform_f32(-PI, PI).rem_euclid(TAU),
+        );
+    }
+}
+
+pub fn rollout_batch(
+    horizon: usize,
+    states: &mut [State],
+    ax: &[f32],
+    ay: &[f32],
+    out_states: &mut [State],
+) {
+    let n = states.len();
+    assert_eq!(ax.len(), horizon * n);
+    assert_eq!(ay.len(), horizon * n);
+    assert_eq!(out_states.len(), horizon * n);
+    for t in 0..horizon {
+        let off = t * n;
+        step_batch_in_place(states, &ax[off..off + n], &ay[off..off + n]);
+        out_states[off..off + n].copy_from_slice(states);
     }
 }
 

@@ -1,6 +1,6 @@
 //! PyO3 + NumPy Python bindings (`matterstate_envs_rs`) for `matterstate-envs`.
 
-use matterstate_envs::{pointmaze, reacher, render, rng::Rng, sokoban};
+use matterstate_envs::{pointmaze, pusht, reacher, render, rng::Rng, sokoban};
 use numpy::{
     PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadwriteArray1,
     PyUntypedArrayMethods,
@@ -121,6 +121,41 @@ fn reacher_render<'py>(
     Ok(arr)
 }
 
+#[pyfunction]
+fn pusht_step<'py>(
+    mut state: PyReadwriteArray1<'py, f32>,
+    action_x: f32,
+    action_y: f32,
+) -> PyResult<f32> {
+    let s = state.as_slice_mut()?;
+    if s.len() != 7 {
+        return Err(PyValueError::new_err(
+            "expected state of length 7 [ax, ay, avx, avy, bx, by, bangle]",
+        ));
+    }
+    let mut st = pusht::State {
+        agent_x: s[0],
+        agent_y: s[1],
+        agent_vx: s[2],
+        agent_vy: s[3],
+        block_x: s[4],
+        block_y: s[5],
+        block_angle: s[6],
+        block_vx: 0.0,
+        block_vy: 0.0,
+        block_omega: 0.0,
+    };
+    st.step_in_place(action_x, action_y);
+    s[0] = st.agent_x;
+    s[1] = st.agent_y;
+    s[2] = st.agent_vx;
+    s[3] = st.agent_vy;
+    s[4] = st.block_x;
+    s[5] = st.block_y;
+    s[6] = st.block_angle;
+    Ok(st.coverage())
+}
+
 #[pymodule]
 fn matterstate_envs_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("IMG", render::IMG)?;
@@ -129,5 +164,6 @@ fn matterstate_envs_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pointmaze_step_in_place, m)?)?;
     m.add_function(wrap_pyfunction!(pointmaze_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_render, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_step, m)?)?;
     Ok(())
 }
