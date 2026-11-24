@@ -21,6 +21,10 @@ jobs:
       labels: [self-hosted, linux, x64, atlas, matterstate, nixos]
     timeout-minutes: 20
     steps:
+      # Keep deploy-key URL rewrites from leaking into subsequent runner jobs.
+      - name: Isolate Git configuration
+        run: |
+          printf 'GIT_CONFIG_GLOBAL=%s/gitconfig\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
