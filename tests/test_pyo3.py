@@ -1,0 +1,51 @@
+"""Tests for the PyO3 `matterstate_envs_rs` extension module."""
+
+import numpy as np
+import pytest
+
+from matterstate_envs import pointmaze, reacher, sokoban
+
+matterstate_envs_rs = pytest.importorskip("matterstate_envs_rs")
+
+
+def test_pyo3_sokoban_step() -> None:
+    grid = np.full((10, 10), sokoban.FLOOR, np.int8)
+    grid[[0, -1], :] = sokoban.WALL
+    grid[:, [0, -1]] = sokoban.WALL
+    grid[4, 3:6] = [sokoban.PLR, sokoban.BOX, sokoban.TARGET]
+    flat = grid.ravel()
+    expected = sokoban.step(flat, 3)
+    actual = matterstate_envs_rs.sokoban_step(flat, 3)
+    np.testing.assert_array_equal(actual, expected)
+
+
+def test_pyo3_pointmaze_reset_and_rollout() -> None:
+    batch = 32
+    horizon = 16
+    x, y, gx, gy = matterstate_envs_rs.pointmaze_reset(42, batch)
+    start = np.stack([x, y], -1)
+    goal = np.stack([gx, gy], -1)
+    assert not pointmaze.in_wall(start).any()
+    assert (np.linalg.norm(start - goal, axis=-1) >= 0.4 - 1e-6).all()
+
+    rng = np.random.default_rng(7)
+    actions = rng.uniform(-1.0, 1.0, (horizon, batch, 2)).astype(np.float32)
+    ax = np.ascontiguousarray(actions[:, :, 0]).ravel()
+    ay = np.ascontiguousarray(actions[:, :, 1]).ravel()
+    tx, ty = matterstate_envs_rs.pointmaze_rollout(horizon, x, y, ax, ay)
+
+    pos = start.copy()
+    exp = []
+    for t in range(horizon):
+        pos = pointmaze.step(pos, actions[t])
+        exp.append(pos)
+    np.testing.assert_allclose(np.stack([tx, ty], -1), np.stack(exp), atol=1e-5)
+
+
+def test_pyo3_reacher_render() -> None:
+    rng = np.random.default_rng(11)
+    theta, _ = reacher.reset(rng, 16)
+    t1 = np.ascontiguousarray(theta[:, 0])
+    t2 = np.ascontiguousarray(theta[:, 1])
+    frames = matterstate_envs_rs.reacher_render(t1, t2, 48)
+    np.testing.assert_array_equal(frames[..., None], reacher.render(theta))

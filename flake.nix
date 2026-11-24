@@ -26,6 +26,7 @@
             pkgs.ast-grep
             pkgs.cargo
             pkgs.clippy
+            pkgs.maturin
             pkgs.nixfmt
             pkgs.python313
             pkgs.ruff

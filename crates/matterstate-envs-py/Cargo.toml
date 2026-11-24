@@ -1,0 +1,18 @@
+[package]
+name = "matterstate-envs-py"
+version = "0.1.0"
+edition = "2024"
+description = "PyO3 Python bindings for matterstate-envs"
+
+[lib]
+name = "matterstate_envs_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+matterstate-envs = { path = "../.." }
+numpy = "0.24"
+pyo3 = { version = "0.24", features = ["extension-module"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
