@@ -13,7 +13,11 @@ build-backend = "hatchling.build"
 packages = ["matterstate_envs"]
 
 [dependency-groups]
-dev = ["pytest>=8", "syrupy>=4"]
+dev = [
+    "hegel-core>=0.10.0",
+    "pytest>=8",
+    "syrupy>=4",
+]
 reference = [
   "gym-sokoban==0.0.6",
   "gymnasium[mujoco]>=1.1,<2",
