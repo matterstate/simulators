@@ -17,6 +17,7 @@
 !/tests/reference/ogbench/uv.lock
 **/.venv/
 !/.ast-grep/**/*.yml
+!/.github/actionlint.yaml
 !/.github/workflows/*.yml
 **/__pycache__/
 **/*.pyc

@@ -22,6 +22,7 @@
         formatter = pkgs.nixfmt;
         devshells.default = {
           packages = [
+            pkgs.actionlint
             pkgs.ast-grep
             pkgs.nixfmt
             pkgs.python313
@@ -59,6 +60,7 @@
               help = "Verify source, extraction snapshots, and external parity";
               command = ''
                 set -eu
+                actionlint
                 nixfmt --check flake.nix
                 ruff check .
                 ruff format --check .

@@ -44,6 +44,19 @@ To run only extraction regression tests without external engines:
 uv run --frozen python -m pytest tests/test_regression.py
 ```
 
+## CI runner access
+
+CI runs on the Matterstate `atlas-trusted` group with labels
+`self-hosted, linux, x64, atlas, matterstate, nixos`. Nix is already present.
+Only `main` pushes and manual dispatches of `main` run on this shared host;
+PRs require an isolated runner. Superseded checks are cancelled.
+
+The org runner group must permit this repository and selected workflow
+`matterstate/simulators/.github/workflows/check.yml@refs/heads/main`, in addition
+to its existing allowlist. This requires org-admin or runner-group permissions;
+do not replace existing entries or authorize arbitrary PR code. Queued jobs
+are not evidence of passing parity checks.
+
 ## Parity status
 
 | Surface | Reference | Evidence |
