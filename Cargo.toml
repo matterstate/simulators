@@ -2,7 +2,11 @@
 name = "matterstate-envs"
 version = "0.1.0"
 edition = "2024"
-description = "Fast native simulator kernels for Matterstate"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/matterstate/simulators"
+description = "Fast native Rust simulator kernels with Python/NumPy bindings"
+keywords = ["rl", "simulator", "simd", "sokoban", "pusht"]
 
 [lib]
 name = "matterstate_envs"

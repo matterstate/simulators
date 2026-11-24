@@ -3,6 +3,7 @@
 !/.gitignore
 !/.python-version
 !/AGENTS.md
+!/LICENSE
 !/README.md
 !/VERIFY.md
 !/flake.nix
