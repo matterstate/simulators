@@ -1,0 +1,17 @@
+[package]
+name = "matterstate-envs"
+version = "0.1.0"
+edition = "2024"
+description = "Fast native simulator kernels for Matterstate"
+
+[lib]
+name = "matterstate_envs"
+path = "src/lib.rs"
+
+[[bench]]
+name = "sokoban"
+harness = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

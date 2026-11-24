@@ -7,9 +7,13 @@
 !/VERIFY.md
 !/flake.nix
 !/flake.lock
+!/Cargo.toml
+!/Cargo.lock
 !/pyproject.toml
 !/uv.lock
 !/sgconfig.yml
+!/src/**/*.rs
+!/benches/**/*.rs
 !/matterstate_envs/**/*.py
 !/benchmarks/**/*.py
 !/tests/**/*.py

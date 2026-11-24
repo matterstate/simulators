@@ -24,9 +24,14 @@
           packages = [
             pkgs.actionlint
             pkgs.ast-grep
+            pkgs.cargo
+            pkgs.clippy
             pkgs.nixfmt
             pkgs.python313
             pkgs.ruff
+            pkgs.rustc
+            pkgs.rustfmt
+            pkgs.stdenv.cc
             pkgs.uv
           ];
           env = [
@@ -64,6 +69,9 @@
                 nixfmt --check flake.nix
                 ruff check .
                 ruff format --check .
+                cargo fmt --check
+                cargo clippy --all-targets -- -D warnings
+                cargo test --quiet
                 ast-grep test
                 ast-grep scan
                 uv run --frozen --group reference python -m pytest -q -p no:cacheprovider tests
