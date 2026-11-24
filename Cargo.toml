@@ -9,6 +9,14 @@ name = "matterstate_envs"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 
+[features]
+default = []
+python = ["dep:pyo3", "dep:numpy"]
+
+[dependencies]
+numpy = { version = "0.24", optional = true }
+pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
+
 [[bench]]
 name = "sokoban"
 harness = false

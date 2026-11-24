@@ -14,10 +14,6 @@
 !/sgconfig.yml
 !/src/**/*.rs
 !/benches/**/*.rs
-!/crates/**/Cargo.toml
-!/crates/**/Cargo.lock
-!/crates/**/pyproject.toml
-!/crates/**/src/**/*.rs
 !/matterstate_envs/**/*.py
 !/benchmarks/**/*.py
 !/tests/**/*.py

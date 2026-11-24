@@ -1,6 +1,7 @@
 //! PyO3 + NumPy Python bindings (`matterstate_envs_rs`) for `matterstate-envs`.
+#![allow(clippy::type_complexity, clippy::needless_question_mark)]
 
-use matterstate_envs::{
+use crate::{
     armpush, ogbench_maze, pointmaze, pointmaze_proc, pointpush, pusht, reacher, reacher_morph,
     reacher_obs, render, rng::Rng, sokoban, sudoku,
 };
@@ -867,7 +868,7 @@ fn ogbench_maze_step_in_place<'py>(
 }
 
 #[pymodule]
-fn matterstate_envs_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("IMG", render::IMG)?;
     m.add_function(wrap_pyfunction!(sokoban_step, m)?)?;
     m.add_function(wrap_pyfunction!(pointmaze_reset, m)?)?;

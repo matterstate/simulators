@@ -6,11 +6,13 @@ requires-python = ">=3.13,<3.14"
 dependencies = ["numpy==2.3.5"]
 
 [build-system]
-requires = ["hatchling>=1.27"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
 
-[tool.hatch.build.targets.wheel]
-packages = ["matterstate_envs"]
+[tool.maturin]
+features = ["python"]
+module-name = "matterstate_envs._rs"
+python-source = "."
 
 [dependency-groups]
 dev = [

@@ -72,6 +72,7 @@
                 ruff format --check .
                 cargo fmt --check
                 cargo clippy --all-targets -- -D warnings
+                cargo clippy --features python --lib -- -D warnings
                 cargo test --quiet
                 cargo build --release --lib --quiet
                 ast-grep test

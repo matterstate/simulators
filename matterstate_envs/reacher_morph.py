@@ -14,7 +14,7 @@ per-batch L=(B,2)=[L1,L2].
 import numpy as np
 
 try:
-    import matterstate_envs_rs as _rs
+    from matterstate_envs import _rs
 except ImportError:
     _rs = None
 

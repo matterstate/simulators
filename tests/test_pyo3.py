@@ -1,11 +1,9 @@
 """Tests for the PyO3 `matterstate_envs_rs` extension module."""
 
 import numpy as np
-import pytest
 
+from matterstate_envs import _rs as matterstate_envs_rs
 from matterstate_envs import pointmaze, reacher, sokoban
-
-matterstate_envs_rs = pytest.importorskip("matterstate_envs_rs")
 
 
 def test_pyo3_sokoban_step() -> None:
