@@ -12,6 +12,10 @@ path = "src/lib.rs"
 name = "sokoban"
 harness = false
 
+[[bench]]
+name = "continuous"
+harness = false
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
