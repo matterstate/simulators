@@ -17,6 +17,11 @@ batches of distinct mazes at once.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 G = 6  # maze grid cells per side
 IMG = 48  # rendered frame size (CELL = IMG // G px per cell)
 CELL = IMG // G
@@ -125,6 +130,13 @@ def _walls_img(walls):  # (B,G,G) -> (B,IMG,IMG) float, wall cell = 0.4
 
 # (B,2),(B,G,G) -> (B,IMG,IMG,1): agent blob over the walls
 def render(pos, walls, r=1.5):
+    if _rs is not None and pos.dtype == np.float32 and walls.dtype == np.bool_:
+        return _rs.pointmaze_proc_render(
+            np.ascontiguousarray(pos[:, 0]),
+            np.ascontiguousarray(pos[:, 1]),
+            np.ascontiguousarray(walls),
+            float(r),
+        )[..., None]
     wimg = _walls_img(walls)
     yy, xx = np.meshgrid(np.arange(IMG), np.arange(IMG), indexing="ij")
     px, py = pos[:, 0] * IMG, pos[:, 1] * IMG

@@ -14,6 +14,11 @@ Reuses reacher fk/step/joint-velocity control. Pure vectorized numpy.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 from matterstate_envs.reacher import (
     BASE,
     GOAL_THRESH,
@@ -174,6 +179,19 @@ def render(
     obs,
     img=48,
 ):
+    if (
+        _rs is not None
+        and theta.dtype == np.float32
+        and obs.dtype == np.float32
+    ):
+        return _rs.reacher_obs_render(
+            np.ascontiguousarray(theta[:, 0]),
+            np.ascontiguousarray(theta[:, 1]),
+            np.ascontiguousarray(obs[:, 0]),
+            np.ascontiguousarray(obs[:, 1]),
+            np.ascontiguousarray(obs[:, 2]),
+            img,
+        )[..., None]
     elbow, ee = fk(theta)
     b = np.broadcast_to(BASE, elbow.shape)
     frame = np.zeros((len(theta), img, img), np.float32)

@@ -13,6 +13,11 @@ per-batch L=(B,2)=[L1,L2].
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 from matterstate_envs.reacher import (
     BASE,
     GOAL_THRESH,
@@ -79,6 +84,14 @@ def reset(
 
 # (B,2),(B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)
 def render(theta, L, img=48):
+    if _rs is not None and theta.dtype == np.float32 and L.dtype == np.float32:
+        return _rs.reacher_morph_render(
+            np.ascontiguousarray(theta[:, 0]),
+            np.ascontiguousarray(theta[:, 1]),
+            np.ascontiguousarray(L[:, 0]),
+            np.ascontiguousarray(L[:, 1]),
+            img,
+        )[..., None]
     elbow, ee = fk(theta, L)
     b = np.broadcast_to(BASE, elbow.shape)
     frame = np.zeros((len(theta), img, img), np.float32)

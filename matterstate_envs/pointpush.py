@@ -18,6 +18,11 @@ conv encoder can localize both.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 DT = 0.05
 R_AGENT = 0.035
 R_OBJ = 0.06
@@ -81,6 +86,18 @@ def _blob(frame, pos, r, val):
 
 # (B,2),(B,2) -> (B,img,img,1): object (0.55) under agent (1.0)
 def render(agent, obj, img=48):
+    if (
+        _rs is not None
+        and agent.dtype == np.float32
+        and obj.dtype == np.float32
+    ):
+        return _rs.pointpush_render(
+            np.ascontiguousarray(agent[:, 0]),
+            np.ascontiguousarray(agent[:, 1]),
+            np.ascontiguousarray(obj[:, 0]),
+            np.ascontiguousarray(obj[:, 1]),
+            img,
+        )[..., None]
     frame = np.zeros((len(agent), img, img), np.float32)
     frame = _blob(frame, obj, R_OBJ, 0.55)
     frame = _blob(frame, agent, R_AGENT, 1.0)

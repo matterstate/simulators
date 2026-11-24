@@ -1,7 +1,7 @@
 id: runtime-imports
 language: Python
 severity: error
-message: Runtime kernels may import only numpy and matterstate_envs.
+message: Runtime kernels may import only numpy, matterstate_envs, and matterstate_envs_rs.
 files:
   - matterstate_envs/**/*.py
 rule:
@@ -12,4 +12,4 @@ rule:
 constraints:
   MODULE:
     not:
-      regex: "^(numpy|matterstate_envs)(\\.|$)"
+      regex: "^(numpy|matterstate_envs|matterstate_envs_rs)(\\.|$)"

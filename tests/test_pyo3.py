@@ -78,3 +78,23 @@ def test_pyo3_pusht_rgb_and_ogbench_maze() -> None:
 
     matterstate_envs_rs.ogbench_maze_large_step_in_place(x, y, vx, vy, fx, fy)
     assert x[0] > 6.0
+
+
+def test_pyo3_pusht_reset_coverage_rollout_and_sudoku() -> None:
+    states = matterstate_envs_rs.pusht_reset(42, 8)
+    assert states.shape == (8, 7)
+    covs = matterstate_envs_rs.pusht_coverage(states)
+    assert covs.shape == (8,)
+    assert ((covs >= 0.0) & (covs <= 1.0)).all()
+
+    ax = np.full(5 * 8, 256.0, np.float32)
+    ay = np.full(5 * 8, 256.0, np.float32)
+    traj = matterstate_envs_rs.pusht_rollout(5, states, ax, ay)
+    assert traj.shape == (5, 8, 7)
+
+    puz, sol = matterstate_envs_rs.sudoku_generate(4, 6, 0.5, 42, True)
+    assert puz.shape == (6, 16)
+    assert sol.shape == (6, 16)
+    assert puz.dtype == np.int8
+    assert sol.dtype == np.int8
+    assert ((sol >= 1) & (sol <= 4)).all()

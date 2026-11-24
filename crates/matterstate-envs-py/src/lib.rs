@@ -2,7 +2,7 @@
 
 use matterstate_envs::{
     armpush, ogbench_maze, pointmaze, pointmaze_proc, pointpush, pusht, reacher, reacher_morph,
-    reacher_obs, render, rng::Rng, sokoban,
+    reacher_obs, render, rng::Rng, sokoban, sudoku,
 };
 use numpy::{
     PyArray1, PyArray2, PyArray3, PyArray4, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
@@ -587,6 +587,263 @@ fn ogbench_maze_large_step_in_place<'py>(
 }
 
 #[pyfunction]
+fn pusht_reset<'py>(
+    py: Python<'py>,
+    seed: u64,
+    batch: usize,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let mut rng = Rng::seed_from_u64(seed);
+    let mut states = vec![pusht::State::new(0.0, 0.0, 0.0, 0.0, 0.0); batch];
+    pusht::reset_batch(&mut rng, &mut states);
+    let mut flat = Vec::with_capacity(batch * 7);
+    for s in states {
+        flat.extend_from_slice(&[
+            s.agent_x,
+            s.agent_y,
+            s.agent_vx,
+            s.agent_vy,
+            s.block_x,
+            s.block_y,
+            s.block_angle,
+        ]);
+    }
+    Ok(PyArray1::from_vec(py, flat).reshape([batch, 7])?)
+}
+
+#[pyfunction]
+fn pusht_coverage<'py>(
+    py: Python<'py>,
+    states: PyReadonlyArray2<'py, f32>,
+) -> PyResult<Bound<'py, PyArray1<f32>>> {
+    let shape = states.shape();
+    if shape.len() != 2 || shape[1] != 7 {
+        return Err(PyValueError::new_err("expected states of shape (B, 7)"));
+    }
+    let flat = states.as_slice()?;
+    let covs: Vec<f32> = flat
+        .chunks_exact(7)
+        .map(|s| pusht::State::new(s[0], s[1], s[4], s[5], s[6]).coverage())
+        .collect();
+    Ok(PyArray1::from_vec(py, covs))
+}
+
+#[pyfunction]
+fn pusht_rollout<'py>(
+    py: Python<'py>,
+    horizon: usize,
+    mut states: PyReadwriteArray2<'py, f32>,
+    ax: PyReadonlyArray1<'py, f32>,
+    ay: PyReadonlyArray1<'py, f32>,
+) -> PyResult<Bound<'py, PyArray3<f32>>> {
+    let shape = states.shape().to_vec();
+    if shape.len() != 2 || shape[1] != 7 {
+        return Err(PyValueError::new_err("expected states of shape (B, 7)"));
+    }
+    let n = shape[0];
+    let axs = ax.as_slice()?;
+    let ays = ay.as_slice()?;
+    if axs.len() != horizon * n || ays.len() != horizon * n {
+        return Err(PyValueError::new_err("mismatched rollout dimensions"));
+    }
+    let flat = states.as_slice_mut()?;
+    let mut rust_states: Vec<pusht::State> = flat
+        .chunks_exact(7)
+        .map(|s| pusht::State {
+            agent_x: s[0],
+            agent_y: s[1],
+            agent_vx: s[2],
+            agent_vy: s[3],
+            block_x: s[4],
+            block_y: s[5],
+            block_angle: s[6],
+            block_vx: 0.0,
+            block_vy: 0.0,
+            block_omega: 0.0,
+        })
+        .collect();
+    let mut out = Vec::with_capacity(horizon * n * 7);
+    for t in 0..horizon {
+        let off = t * n;
+        pusht::step_batch_in_place(&mut rust_states, &axs[off..off + n], &ays[off..off + n]);
+        for s in &rust_states {
+            out.extend_from_slice(&[
+                s.agent_x,
+                s.agent_y,
+                s.agent_vx,
+                s.agent_vy,
+                s.block_x,
+                s.block_y,
+                s.block_angle,
+            ]);
+        }
+    }
+    for (dst, s) in flat.chunks_exact_mut(7).zip(rust_states.iter()) {
+        dst[0] = s.agent_x;
+        dst[1] = s.agent_y;
+        dst[2] = s.agent_vx;
+        dst[3] = s.agent_vy;
+        dst[4] = s.block_x;
+        dst[5] = s.block_y;
+        dst[6] = s.block_angle;
+    }
+    Ok(PyArray1::from_vec(py, out).reshape([horizon, n, 7])?)
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn pointpush_rollout<'py>(
+    py: Python<'py>,
+    horizon: usize,
+    mut ax: PyReadwriteArray1<'py, f32>,
+    mut ay: PyReadwriteArray1<'py, f32>,
+    mut ox: PyReadwriteArray1<'py, f32>,
+    mut oy: PyReadwriteArray1<'py, f32>,
+    act_x: PyReadonlyArray1<'py, f32>,
+    act_y: PyReadonlyArray1<'py, f32>,
+) -> PyResult<(
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+)> {
+    let n = ax.len();
+    let axs = ax.as_slice_mut()?;
+    let ays = ay.as_slice_mut()?;
+    let oxs = ox.as_slice_mut()?;
+    let oys = oy.as_slice_mut()?;
+    let uxs = act_x.as_slice()?;
+    let uys = act_y.as_slice()?;
+    if ays.len() != n
+        || oxs.len() != n
+        || oys.len() != n
+        || uxs.len() != horizon * n
+        || uys.len() != horizon * n
+    {
+        return Err(PyValueError::new_err("mismatched rollout dimensions"));
+    }
+    let mut tax = vec![0.0_f32; horizon * n];
+    let mut tay = vec![0.0_f32; horizon * n];
+    let mut tox = vec![0.0_f32; horizon * n];
+    let mut toy = vec![0.0_f32; horizon * n];
+    pointpush::rollout_batch(
+        horizon, axs, ays, oxs, oys, uxs, uys, &mut tax, &mut tay, &mut tox, &mut toy,
+    );
+    Ok((
+        PyArray1::from_vec(py, tax).reshape([horizon, n])?,
+        PyArray1::from_vec(py, tay).reshape([horizon, n])?,
+        PyArray1::from_vec(py, tox).reshape([horizon, n])?,
+        PyArray1::from_vec(py, toy).reshape([horizon, n])?,
+    ))
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn armpush_rollout<'py>(
+    py: Python<'py>,
+    horizon: usize,
+    mut t1: PyReadwriteArray1<'py, f32>,
+    mut t2: PyReadwriteArray1<'py, f32>,
+    mut ox: PyReadwriteArray1<'py, f32>,
+    mut oy: PyReadwriteArray1<'py, f32>,
+    a1: PyReadonlyArray1<'py, f32>,
+    a2: PyReadonlyArray1<'py, f32>,
+) -> PyResult<(
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+    Bound<'py, PyArray2<f32>>,
+)> {
+    let n = t1.len();
+    let t1s = t1.as_slice_mut()?;
+    let t2s = t2.as_slice_mut()?;
+    let oxs = ox.as_slice_mut()?;
+    let oys = oy.as_slice_mut()?;
+    let a1s = a1.as_slice()?;
+    let a2s = a2.as_slice()?;
+    if t2s.len() != n
+        || oxs.len() != n
+        || oys.len() != n
+        || a1s.len() != horizon * n
+        || a2s.len() != horizon * n
+    {
+        return Err(PyValueError::new_err("mismatched rollout dimensions"));
+    }
+    let mut tt1 = vec![0.0_f32; horizon * n];
+    let mut tt2 = vec![0.0_f32; horizon * n];
+    let mut tox = vec![0.0_f32; horizon * n];
+    let mut toy = vec![0.0_f32; horizon * n];
+    armpush::rollout_batch(
+        horizon, t1s, t2s, oxs, oys, a1s, a2s, &mut tt1, &mut tt2, &mut tox, &mut toy,
+    );
+    Ok((
+        PyArray1::from_vec(py, tt1).reshape([horizon, n])?,
+        PyArray1::from_vec(py, tt2).reshape([horizon, n])?,
+        PyArray1::from_vec(py, tox).reshape([horizon, n])?,
+        PyArray1::from_vec(py, toy).reshape([horizon, n])?,
+    ))
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn reacher_obs_rollout<'py>(
+    py: Python<'py>,
+    horizon: usize,
+    mut t1: PyReadwriteArray1<'py, f32>,
+    mut t2: PyReadwriteArray1<'py, f32>,
+    a1: PyReadonlyArray1<'py, f32>,
+    a2: PyReadonlyArray1<'py, f32>,
+    ox: PyReadonlyArray1<'py, f32>,
+    oy: PyReadonlyArray1<'py, f32>,
+    or: PyReadonlyArray1<'py, f32>,
+) -> PyResult<(Bound<'py, PyArray2<f32>>, Bound<'py, PyArray2<f32>>)> {
+    let n = t1.len();
+    let t1s = t1.as_slice_mut()?;
+    let t2s = t2.as_slice_mut()?;
+    let a1s = a1.as_slice()?;
+    let a2s = a2.as_slice()?;
+    let oxs = ox.as_slice()?;
+    let oys = oy.as_slice()?;
+    let ors = or.as_slice()?;
+    if t2s.len() != n
+        || oxs.len() != n
+        || oys.len() != n
+        || ors.len() != n
+        || a1s.len() != horizon * n
+        || a2s.len() != horizon * n
+    {
+        return Err(PyValueError::new_err("mismatched rollout dimensions"));
+    }
+    let mut tt1 = vec![0.0_f32; horizon * n];
+    let mut tt2 = vec![0.0_f32; horizon * n];
+    reacher_obs::rollout_batch(
+        horizon, t1s, t2s, a1s, a2s, oxs, oys, ors, &mut tt1, &mut tt2,
+    );
+    Ok((
+        PyArray1::from_vec(py, tt1).reshape([horizon, n])?,
+        PyArray1::from_vec(py, tt2).reshape([horizon, n])?,
+    ))
+}
+
+#[pyfunction]
+#[pyo3(signature = (n, num, clue_frac, seed=0, unique_only=false))]
+fn sudoku_generate<'py>(
+    py: Python<'py>,
+    n: usize,
+    num: usize,
+    clue_frac: f64,
+    seed: u64,
+    unique_only: bool,
+) -> PyResult<(Bound<'py, PyArray2<i8>>, Bound<'py, PyArray2<i8>>)> {
+    let (puzzles, solutions) =
+        py.allow_threads(|| sudoku::generate(n, num, clue_frac, seed, unique_only));
+    let cells = n * n;
+    Ok((
+        PyArray1::from_vec(py, puzzles).reshape([num, cells])?,
+        PyArray1::from_vec(py, solutions).reshape([num, cells])?,
+    ))
+}
+
+#[pyfunction]
 fn ogbench_maze_step_in_place<'py>(
     mut x: PyReadwriteArray1<'py, f32>,
     mut y: PyReadwriteArray1<'py, f32>,
@@ -620,21 +877,28 @@ fn matterstate_envs_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(pointmaze_proc_render, m)?)?;
     m.add_function(wrap_pyfunction!(pointpush_reset, m)?)?;
     m.add_function(wrap_pyfunction!(pointpush_step_in_place, m)?)?;
+    m.add_function(wrap_pyfunction!(pointpush_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(pointpush_render, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_reset, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_step_in_place, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_render, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_obs_step_in_place, m)?)?;
+    m.add_function(wrap_pyfunction!(reacher_obs_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_obs_render, m)?)?;
     m.add_function(wrap_pyfunction!(reacher_morph_render, m)?)?;
     m.add_function(wrap_pyfunction!(armpush_step_in_place, m)?)?;
+    m.add_function(wrap_pyfunction!(armpush_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(armpush_render, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_reset, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_coverage, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_step, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_step_batch, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_rollout, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_render_rgb, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_render_rgb_batch, m)?)?;
     m.add_function(wrap_pyfunction!(ogbench_maze_step_in_place, m)?)?;
     m.add_function(wrap_pyfunction!(ogbench_maze_large_step_in_place, m)?)?;
+    m.add_function(wrap_pyfunction!(sudoku_generate, m)?)?;
     Ok(())
 }

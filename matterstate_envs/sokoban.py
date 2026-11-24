@@ -20,6 +20,11 @@ target.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 WALL, FLOOR, TARGET, BOX, BOX_T, PLR, PLR_T = range(7)
 _CHAR = {
     "#": WALL,
@@ -75,6 +80,8 @@ def step(grid, action):
     """
     if not (0 <= action < N_ACT):
         raise ValueError(f"invalid action: {action}")
+    if _rs is not None and grid.dtype == np.int8 and grid.ndim == 1:
+        return _rs.sokoban_step(np.ascontiguousarray(grid), int(action))
     g = grid.reshape(H, W).copy()
     (pr, pc) = np.argwhere((g == PLR) | (g == PLR_T))[0]
     on_t = g[pr, pc] == PLR_T

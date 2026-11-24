@@ -18,6 +18,11 @@ reacher FK/step and PointPush's contact model.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 from matterstate_envs import reacher as RE
 
 R_TIP = 0.03  # the arm tip acts as the pusher
@@ -86,6 +91,18 @@ def render(
     obj,
     img=48,
 ):
+    if (
+        _rs is not None
+        and theta.dtype == np.float32
+        and obj.dtype == np.float32
+    ):
+        return _rs.armpush_render(
+            np.ascontiguousarray(theta[:, 0]),
+            np.ascontiguousarray(theta[:, 1]),
+            np.ascontiguousarray(obj[:, 0]),
+            np.ascontiguousarray(obj[:, 1]),
+            img,
+        )[..., None]
     elbow, tip = RE.fk(theta)
     b = np.broadcast_to(RE.BASE, elbow.shape)
     frame = np.zeros((len(theta), img, img), np.float32)

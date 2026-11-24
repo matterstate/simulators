@@ -19,6 +19,11 @@ encoder can read the arm pose from pixels.
 
 import numpy as np
 
+try:
+    import matterstate_envs_rs as _rs
+except ImportError:
+    _rs = None
+
 L1, L2 = (
     0.22,
     0.2,
@@ -108,6 +113,10 @@ def _blob(frame, pos, r, val):
 
 # (B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)
 def render(theta, img=48):
+    if _rs is not None and theta.dtype == np.float32:
+        t1 = np.ascontiguousarray(theta[:, 0])
+        t2 = np.ascontiguousarray(theta[:, 1])
+        return _rs.reacher_render(t1, t2, img)[..., None]
     elbow, ee = fk(theta)
     b = np.broadcast_to(BASE, elbow.shape)
     frame = np.zeros((len(theta), img, img), np.float32)
