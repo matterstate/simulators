@@ -9,9 +9,13 @@ imports and research-only `__main__` demos were removed.
 | Property | Code/check | Bounds and assumptions |
 |---|---|---|
 | Extraction preserves reset, trajectory, render, and success bytes | `tests/test_regression.py:capture_trajectories`, reviewed Syrupy snapshot | Seed 2026, batch 8, 16 continuous actions; 8 Sokoban actions; NumPy 2.3.5, x86_64 Linux |
+| Rust C-ABI matches NumPy kernels | `tests/test_rust_parity.py` | Byte-exact Sokoban (32 seeds × 32 moves); pixel-exact 48×48 renders; `atol=1e-6..1e-4` continuous steps & 16-step rollouts |
+| PyO3 extension (`matterstate_envs_rs`) matches NumPy kernels | `tests/test_pyo3.py` | Verified when installed in `.venv` (`pytest.importorskip` otherwise) |
+| Rust internal invariants (SIMD, Sokoban reverse round-trip, PRNG) | `cargo test` (`src/*.rs`) | AVX2+FMA vs scalar `pointmaze`, `reverse_predecessors` round-trip, Xoshiro256++ determinism |
 | Sokoban matches independent engine transitions and success | `tests/reference/test_sokoban.py:check_trajectory` | gym-sokoban 0.0.6, 32 seeds, at most 32 moves each; four directed cases of at most 7 moves; 10x10 boards with wall borders |
 | Simulator step does not mutate Sokoban input | `check_trajectory` | Checked after every compared transition |
-| No external engine or research imports in runtime | `.ast-grep/rules/runtime-imports.yml` | Python import statements; tested matching/nonmatching fixtures |
+| Runtime kernels import only `numpy` and `matterstate_envs` | `.ast-grep/rules/runtime-imports.yml` | Default-deny allowlist on `matterstate_envs/**/*.py`; tested fixtures |
+| No unbounded `while True:` loops in runtime kernels | `.ast-grep/rules/bounded-loops.yml` | Enforced on `matterstate_envs/**/*.py`; tested fixtures |
 | No import-path injection | `.ast-grep/rules/python-root-imports.yml` | Tested explicit `sys.path` mutation forms |
 | External OGBench dependency environment remains loadable | `check` import smoke | Python 3.11, independent lockfile; no dataset download or simulation |
 
