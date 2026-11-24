@@ -17,6 +17,10 @@ harness = false
 name = "continuous"
 harness = false
 
+[[bench]]
+name = "scaling"
+harness = false
+
 [profile.release]
 lto = "thin"
 codegen-units = 1
