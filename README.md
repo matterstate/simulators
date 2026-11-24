@@ -83,31 +83,23 @@ to its existing allowlist. This requires org-admin or runner-group permissions;
 do not replace existing entries or authorize arbitrary PR code. Queued jobs
 are not evidence of passing parity checks.
 
-## Parity status
+## Verification
 
-| Surface | Reference | Evidence |
-|---|---|---|
-| All eight extracted NumPy kernels | latent-planner `df2f5b2` | Exact dtype, shape, and byte-hash snapshots of 30 seeded reset/trajectory/render/success arrays |
-| All eight Rust kernels (C-ABI + PyO3) | NumPy reference kernels | Byte-exact Sokoban (32×32 moves), pixel-exact 48×48 renders, `atol=1e-6..1e-4` continuous steps & rollouts |
-| Sokoban grid transitions and success | gym-sokoban 0.0.6 | Exact equality over 32 seeded bounded trajectories and four directed contact/target cases |
-| Custom navigation, arm, and pushing tasks | None equivalent yet | Custom tasks, not benchmark replacements |
-| Gymnasium, robotics, and PushT | Locked `reference` dependency group | Reference engines available; no replacement parity claim |
-| OGBench | Isolated Python 3.11 reference project | Locked dependencies/import check only; no replacement parity claim |
+- **External engine parity**: `sokoban` grid transitions and success are
+  verified byte-for-byte against `gym-sokoban 0.0.6` over 32 seeded
+  trajectories and 4 directed contact/target cases (`tests/reference/test_sokoban.py`).
+  The 2D continuous tasks (`pointmaze*`, `reacher*`, `pointpush`, `armpush`)
+  are custom Matterstate environments rather than MuJoCo, PushT, or OGBench
+  replacements; external benchmark engines are locked in test-only dependency
+  groups for future parity work.
+- **Rust vs. NumPy equivalence**: All 8 Rust kernels are verified against the
+  NumPy kernels via C-ABI (`tests/test_rust_parity.py`) and PyO3
+  (`tests/test_pyo3.py`): byte-exact Sokoban, pixel-exact 48×48 renders, and
+  `atol=1e-6..1e-4` continuous steps and 16-step rollouts.
+- **Regression snapshots**: `tests/test_regression.py` guards NumPy kernel
+  outputs against unintended numerical drift on x86_64 Linux.
 
-Sokoban tests explicitly translate tile and action encodings, construct equal
-initial states, and execute the external engine's real public `step`. They do
-not substitute its movement or renderer. Reward, RGB equality, reset/level
-distributions, time-limit behavior, and performance are outside that test's
-contract. See `VERIFY.md` for bounds and failure-sensitivity checks.
-
-Floating-point extraction snapshots target the locked NumPy 2.3.5 environment
-on x86_64 Linux. They do not establish cross-platform bit equality. Future
-benchmark replacements must define exact or tolerance-based contracts before
-being used instead of the reference; tests must not silently relax equality.
-
-OGBench uses Python 3.11 because its `labmaze` dependency has no usable wheel
-for this project's Python 3.13 environment. Its dependencies and lockfile live
-under `tests/reference/ogbench/`; they are never runtime package dependencies.
+See `VERIFY.md` for the full contract map and bounds.
 
 ## Measured performance (x86_64 Linux, 24-core AVX2+FMA)
 
