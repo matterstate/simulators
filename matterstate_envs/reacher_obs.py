@@ -30,6 +30,7 @@ from matterstate_envs.reacher import (
 # obstacle radius (image-normalized); placed in the arm's workspace so
 # straight-line tip paths cross it
 OBS_R = 0.09
+MAX_SAMPLE_TRIES = 10_000
 
 
 # (B,2)x3 -> (B,) min distance from point c to segment p0->p1
@@ -79,7 +80,9 @@ def reset(
     theta = np.zeros((n, 2), np.float32)
     goal = np.zeros((n, 2), np.float32)
     todo = np.ones(n, bool)
-    while todo.any():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if not todo.any():
+            return theta, goal, obs
         k = int(todo.sum())
         idx = np.where(todo)[0]
         th = rng.uniform(-np.pi, np.pi, (k, 2)).astype(np.float32)
@@ -103,7 +106,7 @@ def reset(
         sel = idx[ok]
         theta[sel], goal[sel], obs[sel] = th[ok], g[ok], o[ok]
         todo[sel] = False
-    return theta, goal, obs
+    raise RuntimeError("reacher_obs.reset exceeded MAX_SAMPLE_TRIES")
 
 
 # Jacobian-transpose tip->goal descent (the REACTIVE baseline that gets stuck)

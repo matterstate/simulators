@@ -24,6 +24,7 @@ from matterstate_envs.reacher import (
 
 L_TRAIN = (0.15, 0.27)  # link-length range seen in training
 L_OOD = (0.28, 0.33)  # held-out longer arms (extrapolation)
+MAX_SAMPLE_TRIES = 10_000
 
 
 def sample_L(rng, n, lo, hi):
@@ -67,11 +68,13 @@ def reset(
         BASE + np.stack([np.cos(ang), np.sin(ang)], -1) * r[:, None]
     ).astype(np.float32)
     far = np.linalg.norm(tip(theta, L) - goal, axis=-1) > 0.18
-    while not far.all():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if far.all():
+            return theta, L, goal
         k = int((~far).sum())
         theta[~far] = rng.uniform(-np.pi, np.pi, (k, 2))
         far = np.linalg.norm(tip(theta, L) - goal, axis=-1) > 0.18
-    return theta, L, goal
+    raise RuntimeError("reacher_morph.reset exceeded MAX_SAMPLE_TRIES")
 
 
 # (B,2),(B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)

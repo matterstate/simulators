@@ -24,6 +24,7 @@ R_OBJ = 0.06
 R_CONTACT = R_AGENT + R_OBJ
 GOAL_THRESH = 0.07
 IMG = 48
+MAX_SAMPLE_TRIES = 10_000
 
 
 def step(agent, obj, action):  # agent,obj,action:(B,2) -> next agent,obj
@@ -52,9 +53,13 @@ def reset(rng, n):
     obj = rng.uniform(0.15, 0.85, (n, 2))
     goal = rng.uniform(0.15, 0.85, (n, 2))
     close = np.linalg.norm(obj - goal, axis=-1) < 0.35
-    while close.any():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if not close.any():
+            break
         goal[close] = rng.uniform(0.15, 0.85, (int(close.sum()), 2))
         close = np.linalg.norm(obj - goal, axis=-1) < 0.35
+    else:
+        raise RuntimeError("pointpush.reset exceeded MAX_SAMPLE_TRIES")
     agent = rng.uniform(0.1, 0.9, (n, 2))
     return (
         agent.astype(np.float32),

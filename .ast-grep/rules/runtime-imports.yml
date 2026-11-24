@@ -1,7 +1,7 @@
 id: runtime-imports
 language: Python
 severity: error
-message: External engines and research code belong in tests, not runtime kernels.
+message: Runtime kernels may import only numpy and matterstate_envs.
 files:
   - matterstate_envs/**/*.py
 rule:
@@ -11,4 +11,5 @@ rule:
     - pattern: from $MODULE import $$$NAMES
 constraints:
   MODULE:
-    regex: "^(gym|gymnasium|gym_pusht|gymnasium_robotics|ogbench|torch|train|evals|model)(\\.|$)"
+    not:
+      regex: "^(numpy|matterstate_envs)(\\.|$)"

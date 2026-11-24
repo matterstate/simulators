@@ -1,0 +1,10 @@
+id: bounded-loops
+language: Python
+severity: error
+message: Avoid unbounded `while True:` loops in runtime kernels; use an explicit upper bound.
+files:
+  - matterstate_envs/**/*.py
+rule:
+  pattern: |
+    while True:
+      $$$BODY

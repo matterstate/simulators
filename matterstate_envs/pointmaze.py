@@ -25,6 +25,7 @@ WALLS = np.array(
 )
 DT = 0.06
 GOAL_THRESH = 0.06
+MAX_SAMPLE_TRIES = 10_000
 
 
 def in_wall(pos):  # pos:(...,2) -> bool(...)
@@ -52,10 +53,12 @@ def solved(pos, goal):  # (B,2),(B,2) -> bool(B)
 def sample_free(rng, n):  # uniform points not inside any wall
     pts = rng.uniform(0, 1, (n, 2))
     bad = in_wall(pts)
-    while bad.any():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if not bad.any():
+            return pts
         pts[bad] = rng.uniform(0, 1, (int(bad.sum()), 2))
         bad = in_wall(pts)
-    return pts
+    raise RuntimeError("pointmaze.sample_free exceeded MAX_SAMPLE_TRIES")
 
 
 # (start, goal) both in free space, and far enough apart to need real
@@ -67,7 +70,9 @@ def reset(
     start = sample_free(rng, n)
     goal = sample_free(rng, n)
     close = np.linalg.norm(start - goal, axis=-1) < 0.4
-    while close.any():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if not close.any():
+            return start, goal
         goal[close] = sample_free(rng, int(close.sum()))
         close = np.linalg.norm(start - goal, axis=-1) < 0.4
-    return start, goal
+    raise RuntimeError("pointmaze.reset exceeded MAX_SAMPLE_TRIES")

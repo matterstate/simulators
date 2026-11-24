@@ -81,11 +81,3 @@ being used instead of the reference; tests must not silently relax equality.
 OGBench uses Python 3.11 because its `labmaze` dependency has no usable wheel
 for this project's Python 3.13 environment. Its dependencies and lockfile live
 under `tests/reference/ogbench/`; they are never runtime package dependencies.
-
-## Known inherited limitation
-
-`reacher_obs.render` cannot broadcast per-item obstacle radii for batches
-larger than one. The extraction snapshot renders those frames individually;
-it does not hide or fix the existing batched-rendering defect. Rejection
-samplers also retain their existing unbounded retry behavior. Neither issue
-was changed during behavior-preserving extraction.

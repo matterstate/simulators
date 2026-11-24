@@ -1,0 +1,12 @@
+id: bounded-loops
+valid:
+  - |
+    for _ in range(10):
+        pass
+  - |
+    while stack:
+        stack.pop()
+invalid:
+  - |
+    while True:
+        break

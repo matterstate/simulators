@@ -30,6 +30,7 @@ STEP = 0.15  # rad per unit action per env step
 GOAL_THRESH = 0.05
 IMG = 48
 LINK_W = 0.018  # render half-thickness of a link
+MAX_SAMPLE_TRIES = 10_000
 
 
 def fk(theta):  # theta:(B,2) -> elbow:(B,2), tip:(B,2)  forward kinematics
@@ -70,11 +71,13 @@ def reset(
         BASE + np.stack([np.cos(ang), np.sin(ang)], -1) * r[:, None]
     ).astype(np.float32)
     far = np.linalg.norm(tip(theta) - goal, axis=-1) > 0.2
-    while not far.all():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if far.all():
+            return theta, goal
         k = int((~far).sum())
         theta[~far] = rng.uniform(-np.pi, np.pi, (k, 2))
         far = np.linalg.norm(tip(theta) - goal, axis=-1) > 0.2
-    return theta, goal
+    raise RuntimeError("reacher.reset exceeded MAX_SAMPLE_TRIES")
 
 
 # paint pixels within w of the segment p0->p1 onto (B,img,img)
@@ -97,7 +100,10 @@ def _blob(frame, pos, r, val):
     d2 = (xx[None] - px[:, None, None]) ** 2 + (
         yy[None] - py[:, None, None]
     ) ** 2
-    return np.where(d2 <= (r * img) ** 2, val, frame)
+    radius = np.asarray(r)
+    if radius.ndim == 1:
+        radius = radius[:, None, None]
+    return np.where(d2 <= (radius * img) ** 2, val, frame)
 
 
 # (B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)

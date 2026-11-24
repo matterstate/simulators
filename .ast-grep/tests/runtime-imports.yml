@@ -6,6 +6,8 @@ valid:
 invalid:
   - import gymnasium as gym
   - import gym_pusht
+  - import jax
+  - import scipy
   - from ogbench import make_env_and_datasets
   - from train.explog import log_result
   - |

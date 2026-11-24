@@ -68,13 +68,7 @@ def capture_trajectories() -> dict[str, np.ndarray]:
         theta = reacher_obs.step_obs(theta, action, obstacle)
         trajectory.append(theta)
     arrays["reacher_obs.trajectory"] = np.stack(trajectory)
-    # The inherited NumPy obstacle renderer cannot broadcast batched radii.
-    arrays["reacher_obs.render"] = np.concatenate(
-        [
-            reacher_obs.render(theta[i : i + 1], obstacle[i : i + 1])
-            for i in range(8)
-        ]
-    )
+    arrays["reacher_obs.render"] = reacher_obs.render(theta, obstacle)
     arrays["reacher_obs.success"] = reacher_obs.solved(theta, goal)
 
     theta, lengths, goal = reacher_morph.reset(rng, 8, 0.15, 0.27)

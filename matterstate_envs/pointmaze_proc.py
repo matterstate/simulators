@@ -22,6 +22,7 @@ IMG = 48  # rendered frame size (CELL = IMG // G px per cell)
 CELL = IMG // G
 DT = 0.06
 GOAL_THRESH = 0.06
+MAX_SAMPLE_TRIES = 10_000
 
 
 # free:(G,G) bool -> mask of the largest 4-connected free component
@@ -59,11 +60,15 @@ def _largest_cc(
 def sample_mazes(rng, n, wall_prob=0.22, min_free=16):
     walls = np.ones((n, G, G), bool)
     for k in range(n):
-        while True:
+        for _ in range(MAX_SAMPLE_TRIES):
             comp = _largest_cc(rng.random((G, G)) >= wall_prob)
             if comp.sum() >= min_free:
                 walls[k] = ~comp
                 break
+        else:
+            raise RuntimeError(
+                "pointmaze_proc.sample_mazes exceeded MAX_SAMPLE_TRIES"
+            )
     return walls
 
 
@@ -95,7 +100,9 @@ def reset(
     start, goal = np.zeros((n, 2), np.float32), np.zeros((n, 2), np.float32)
     for k in range(n):
         free = np.argwhere(~walls[k])  # (m,2) (row,col)
-        while True:
+        if len(free) == 0:
+            raise ValueError("maze has no free cells")
+        for _ in range(MAX_SAMPLE_TRIES):
             (sr, sc), (gr, gc) = (
                 free[rng.integers(len(free))],
                 free[rng.integers(len(free))],
@@ -105,6 +112,8 @@ def reset(
             if np.linalg.norm(s - g) > 0.4:
                 start[k], goal[k] = s, g
                 break
+        else:
+            raise RuntimeError("pointmaze_proc.reset exceeded MAX_SAMPLE_TRIES")
     return start, goal
 
 

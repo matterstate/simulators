@@ -25,6 +25,7 @@ R_OBJ = 0.06
 R_CONTACT = R_TIP + R_OBJ
 GOAL_THRESH = 0.07
 IMG = 48
+MAX_SAMPLE_TRIES = 10_000
 _REACH = (
     abs(RE.L1 - RE.L2) + 0.04,
     RE.L1 + RE.L2 - 0.04,
@@ -70,10 +71,12 @@ def reset(
     obj = _annulus(rng, n)
     goal = _annulus(rng, n)
     close = np.linalg.norm(obj - goal, axis=-1) < 0.25
-    while close.any():
+    for _ in range(MAX_SAMPLE_TRIES):
+        if not close.any():
+            return theta, obj, goal
         goal[close] = _annulus(rng, int(close.sum()))
         close = np.linalg.norm(obj - goal, axis=-1) < 0.25
-    return theta, obj, goal
+    raise RuntimeError("armpush.reset exceeded MAX_SAMPLE_TRIES")
 
 
 # (B,2),(B,2) -> (B,img,img,1): object (0.55) under arm (links 0.5/0.8, tip

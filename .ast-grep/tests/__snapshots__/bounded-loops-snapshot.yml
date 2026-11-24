@@ -1,0 +1,12 @@
+id: bounded-loops
+snapshots:
+  ? |
+    while True:
+        break
+  : labels:
+    - source: |-
+        while True:
+            break
+      style: primary
+      start: 0
+      end: 21

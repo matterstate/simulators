@@ -39,25 +39,30 @@ def load_levels(path, limit=None):
     """Parse a boxoban .txt (blocks of `; idx` + 10 grid lines) → (N, H*W) int8
     grids.
     """
+    if limit is not None and limit <= 0:
+        return np.empty((0, H * W), np.int8)
     grids, rows = [], []
-    for line in open(path):
-        line = line.rstrip("\n")
-        if line.startswith(";"):
-            if rows:
-                grids.append(
-                    np.array(
-                        [[_CHAR[c] for c in r] for r in rows], np.int8
-                    ).ravel()
-                )
-                rows = []
-            if limit and len(grids) >= limit:
-                return np.stack(grids)
-        elif line:
-            rows.append(line)
+    with open(path) as handle:
+        for line in handle:
+            line = line.rstrip("\n")
+            if line.startswith(";"):
+                if rows:
+                    grids.append(
+                        np.array(
+                            [[_CHAR[c] for c in r] for r in rows], np.int8
+                        ).ravel()
+                    )
+                    rows = []
+                if limit is not None and len(grids) >= limit:
+                    return np.stack(grids)
+            elif line:
+                rows.append(line)
     if rows:
         grids.append(
             np.array([[_CHAR[c] for c in r] for r in rows], np.int8).ravel()
         )
+    if not grids:
+        return np.empty((0, H * W), np.int8)
     return np.stack(grids)
 
 
@@ -68,6 +73,8 @@ def step(grid, action):
     grid is
     returned unchanged, which is itself a valid transition to learn.
     """
+    if not (0 <= action < N_ACT):
+        raise ValueError(f"invalid action: {action}")
     g = grid.reshape(H, W).copy()
     (pr, pc) = np.argwhere((g == PLR) | (g == PLR_T))[0]
     on_t = g[pr, pc] == PLR_T
