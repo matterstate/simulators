@@ -39,7 +39,9 @@ def canonical_state(reference: SokobanEnv) -> np.ndarray:
 def check_trajectory(grid: np.ndarray, actions: np.ndarray) -> None:
     reference = reference_for(grid)
     try:
-        np.testing.assert_array_equal(canonical_state(reference), grid)
+        np.testing.assert_array_equal(
+            canonical_state(reference), grid, strict=True
+        )
         for action in actions:
             original = grid.copy()
             expected = simulator.step(grid, int(action))
@@ -48,8 +50,10 @@ def check_trajectory(grid: np.ndarray, actions: np.ndarray) -> None:
             _, _, done, _ = reference.step(
                 int(action) + 1, observation_mode="tiny_rgb_array"
             )
-            np.testing.assert_array_equal(canonical_state(reference), expected)
-            np.testing.assert_array_equal(grid, original)
+            np.testing.assert_array_equal(
+                canonical_state(reference), expected, strict=True
+            )
+            np.testing.assert_array_equal(grid, original, strict=True)
             assert bool(done) == simulator.solved(expected)
             grid = expected
             if done:
