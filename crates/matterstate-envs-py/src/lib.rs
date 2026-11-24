@@ -5,8 +5,8 @@ use matterstate_envs::{
     reacher_obs, render, rng::Rng, sokoban,
 };
 use numpy::{
-    PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray3,
-    PyReadwriteArray1, PyUntypedArrayMethods,
+    PyArray1, PyArray2, PyArray3, PyArray4, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
+    PyReadonlyArray3, PyReadwriteArray1, PyReadwriteArray2, PyUntypedArrayMethods,
 };
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -497,6 +497,96 @@ fn pusht_render_rgb<'py>(
 }
 
 #[pyfunction]
+fn pusht_step_batch<'py>(
+    py: Python<'py>,
+    mut states: PyReadwriteArray2<'py, f32>,
+    ax: PyReadonlyArray1<'py, f32>,
+    ay: PyReadonlyArray1<'py, f32>,
+) -> PyResult<Bound<'py, PyArray1<f32>>> {
+    let shape = states.shape().to_vec();
+    if shape.len() != 2 || shape[1] != 7 {
+        return Err(PyValueError::new_err("expected states of shape (B, 7)"));
+    }
+    let n = shape[0];
+    let axs = ax.as_slice()?;
+    let ays = ay.as_slice()?;
+    if axs.len() != n || ays.len() != n {
+        return Err(PyValueError::new_err("mismatched batch lengths"));
+    }
+    let flat = states.as_slice_mut()?;
+    let mut covs = Vec::with_capacity(n);
+    for i in 0..n {
+        let s = &mut flat[i * 7..(i + 1) * 7];
+        let mut st = pusht::State {
+            agent_x: s[0],
+            agent_y: s[1],
+            agent_vx: s[2],
+            agent_vy: s[3],
+            block_x: s[4],
+            block_y: s[5],
+            block_angle: s[6],
+            block_vx: 0.0,
+            block_vy: 0.0,
+            block_omega: 0.0,
+        };
+        st.step_in_place(axs[i], ays[i]);
+        s[0] = st.agent_x;
+        s[1] = st.agent_y;
+        s[2] = st.agent_vx;
+        s[3] = st.agent_vy;
+        s[4] = st.block_x;
+        s[5] = st.block_y;
+        s[6] = st.block_angle;
+        covs.push(st.coverage());
+    }
+    Ok(PyArray1::from_vec(py, covs))
+}
+
+#[pyfunction]
+fn pusht_render_rgb_batch<'py>(
+    py: Python<'py>,
+    states: PyReadonlyArray2<'py, f32>,
+    size: usize,
+) -> PyResult<Bound<'py, PyArray4<u8>>> {
+    let shape = states.shape();
+    if shape.len() != 2 || shape[1] != 7 {
+        return Err(PyValueError::new_err("expected states of shape (B, 7)"));
+    }
+    let n = shape[0];
+    let flat = states.as_slice()?;
+    let rust_states: Vec<pusht::State> = flat
+        .chunks_exact(7)
+        .map(|s| pusht::State::new(s[0], s[1], s[4], s[5], s[6]))
+        .collect();
+    let mut rgb = vec![0u8; n * size * size * 3];
+    pusht::render_rgb_batch(&rust_states, size, &mut rgb);
+    Ok(PyArray1::from_vec(py, rgb).reshape([n, size, size, 3])?)
+}
+
+#[pyfunction]
+fn ogbench_maze_large_step_in_place<'py>(
+    mut x: PyReadwriteArray1<'py, f32>,
+    mut y: PyReadwriteArray1<'py, f32>,
+    mut vx: PyReadwriteArray1<'py, f32>,
+    mut vy: PyReadwriteArray1<'py, f32>,
+    fx: PyReadonlyArray1<'py, f32>,
+    fy: PyReadonlyArray1<'py, f32>,
+) -> PyResult<()> {
+    let xs = x.as_slice_mut()?;
+    let ys = y.as_slice_mut()?;
+    let vxs = vx.as_slice_mut()?;
+    let vys = vy.as_slice_mut()?;
+    let fxs = fx.as_slice()?;
+    let fys = fy.as_slice()?;
+    let n = xs.len();
+    if ys.len() != n || vxs.len() != n || vys.len() != n || fxs.len() != n || fys.len() != n {
+        return Err(PyValueError::new_err("mismatched batch lengths"));
+    }
+    ogbench_maze::step_large_batch_in_place(xs, ys, vxs, vys, fxs, fys);
+    Ok(())
+}
+
+#[pyfunction]
 fn ogbench_maze_step_in_place<'py>(
     mut x: PyReadwriteArray1<'py, f32>,
     mut y: PyReadwriteArray1<'py, f32>,
@@ -541,7 +631,10 @@ fn matterstate_envs_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(armpush_step_in_place, m)?)?;
     m.add_function(wrap_pyfunction!(armpush_render, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_step, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_step_batch, m)?)?;
     m.add_function(wrap_pyfunction!(pusht_render_rgb, m)?)?;
+    m.add_function(wrap_pyfunction!(pusht_render_rgb_batch, m)?)?;
     m.add_function(wrap_pyfunction!(ogbench_maze_step_in_place, m)?)?;
+    m.add_function(wrap_pyfunction!(ogbench_maze_large_step_in_place, m)?)?;
     Ok(())
 }

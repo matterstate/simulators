@@ -349,6 +349,14 @@ pub fn step_batch_in_place(states: &mut [State], ax: &[f32], ay: &[f32]) {
     }
 }
 
+pub fn render_rgb_batch(states: &[State], size: usize, rgb: &mut [u8]) {
+    let frame_len = size * size * 3;
+    assert_eq!(rgb.len(), states.len() * frame_len);
+    for (s, frame) in states.iter().zip(rgb.chunks_exact_mut(frame_len)) {
+        s.render_rgb(size, frame);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

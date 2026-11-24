@@ -67,3 +67,14 @@ def test_pyo3_pusht_rgb_and_ogbench_maze() -> None:
     fy = np.array([0.0], np.float32)
     matterstate_envs_rs.ogbench_maze_step_in_place(x, y, vx, vy, fx, fy)
     assert x[0] > 6.0
+
+    states = np.tile(state, (4, 1))
+    covs = matterstate_envs_rs.pusht_step_batch(
+        states, np.full(4, 290.0, np.float32), np.full(4, 320.0, np.float32)
+    )
+    assert covs.shape == (4,)
+    rgbs = matterstate_envs_rs.pusht_render_rgb_batch(states, 96)
+    assert rgbs.shape == (4, 96, 96, 3)
+
+    matterstate_envs_rs.ogbench_maze_large_step_in_place(x, y, vx, vy, fx, fy)
+    assert x[0] > 6.0
