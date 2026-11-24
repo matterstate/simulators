@@ -9,4 +9,5 @@ pub mod reacher;
 pub mod reacher_morph;
 pub mod reacher_obs;
 pub mod render;
+pub mod rng;
 pub mod sokoban;

@@ -247,6 +247,23 @@ pub fn step_batch_in_place(boards: &mut [Board], actions: &[Action]) {
     }
 }
 
+/// Roll out `horizon` steps over a batch of boards in place.
+pub fn rollout_batch(
+    horizon: usize,
+    boards: &mut [Board],
+    actions: &[Action],
+    out_boards: &mut [Board],
+) {
+    let n = boards.len();
+    assert_eq!(actions.len(), horizon * n);
+    assert_eq!(out_boards.len(), horizon * n);
+    for t in 0..horizon {
+        let off = t * n;
+        step_batch_in_place(boards, &actions[off..off + n]);
+        out_boards[off..off + n].copy_from_slice(boards);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

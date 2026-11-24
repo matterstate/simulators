@@ -144,6 +144,42 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.c_size_t,
         _F32_P,
     ]
+    lib.ms_pointmaze_reset.argtypes = [
+        ctypes.c_uint64,
+        ctypes.c_size_t,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+    ]
+    lib.ms_pointmaze_rollout.argtypes = [
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+    ]
+    lib.ms_reacher_reset.argtypes = [
+        ctypes.c_uint64,
+        ctypes.c_size_t,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+    ]
+    lib.ms_reacher_rollout.argtypes = [
+        ctypes.c_size_t,
+        ctypes.c_size_t,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+        _F32_P,
+    ]
     return lib
 
 
@@ -347,4 +383,82 @@ def test_continuous_step_and_render_parity() -> None:
     )
     np.testing.assert_array_equal(
         frames[..., None], armpush.render(exp_th, exp_ob)
+    )
+
+
+def test_reset_and_rollout_parity() -> None:
+    lib = _load_lib()
+    batch = 32
+    horizon = 16
+    rng = np.random.default_rng(99)
+    actions = rng.uniform(-1.0, 1.0, (horizon, batch, 2)).astype(np.float32)
+    ax = np.ascontiguousarray(actions[:, :, 0])
+    ay = np.ascontiguousarray(actions[:, :, 1])
+
+    # pointmaze reset invariants + rollout parity
+    x = np.empty(batch, np.float32)
+    y = np.empty(batch, np.float32)
+    gx = np.empty(batch, np.float32)
+    gy = np.empty(batch, np.float32)
+    lib.ms_pointmaze_reset(
+        42, batch, _f32_ptr(x), _f32_ptr(y), _f32_ptr(gx), _f32_ptr(gy)
+    )
+    start = np.stack([x, y], -1)
+    goal = np.stack([gx, gy], -1)
+    assert not pointmaze.in_wall(start).any()
+    assert not pointmaze.in_wall(goal).any()
+    assert (np.linalg.norm(start - goal, axis=-1) >= 0.4 - 1e-6).all()
+
+    traj_x = np.empty((horizon, batch), np.float32)
+    traj_y = np.empty((horizon, batch), np.float32)
+    lib.ms_pointmaze_rollout(
+        horizon,
+        batch,
+        _f32_ptr(x),
+        _f32_ptr(y),
+        _f32_ptr(ax),
+        _f32_ptr(ay),
+        _f32_ptr(traj_x),
+        _f32_ptr(traj_y),
+    )
+    pos = start.copy()
+    exp_traj = []
+    for t in range(horizon):
+        pos = pointmaze.step(pos, actions[t])
+        exp_traj.append(pos)
+    np.testing.assert_allclose(
+        np.stack([traj_x, traj_y], -1), np.stack(exp_traj), atol=1e-5
+    )
+
+    # reacher reset invariants + rollout parity
+    t1 = np.empty(batch, np.float32)
+    t2 = np.empty(batch, np.float32)
+    lib.ms_reacher_reset(
+        42, batch, _f32_ptr(t1), _f32_ptr(t2), _f32_ptr(gx), _f32_ptr(gy)
+    )
+    start_th = np.stack([t1, t2], -1)
+    goal = np.stack([gx, gy], -1)
+    assert (
+        np.linalg.norm(reacher.tip(start_th) - goal, axis=-1) > 0.2 - 1e-5
+    ).all()
+
+    traj_t1 = np.empty((horizon, batch), np.float32)
+    traj_t2 = np.empty((horizon, batch), np.float32)
+    lib.ms_reacher_rollout(
+        horizon,
+        batch,
+        _f32_ptr(t1),
+        _f32_ptr(t2),
+        _f32_ptr(ax),
+        _f32_ptr(ay),
+        _f32_ptr(traj_t1),
+        _f32_ptr(traj_t2),
+    )
+    th = start_th.copy()
+    exp_th = []
+    for t in range(horizon):
+        th = reacher.step(th, actions[t])
+        exp_th.append(th)
+    np.testing.assert_allclose(
+        np.stack([traj_t1, traj_t2], -1), np.stack(exp_th), atol=1e-4
     )

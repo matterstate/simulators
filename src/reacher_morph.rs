@@ -1,7 +1,12 @@
 //! Vectorized variable-morphology 2-link Reacher matching `matterstate_envs.reacher_morph`.
 
+use std::f32::consts::PI;
+
 use crate::reacher::{BASE_X, BASE_Y, GOAL_THRESH, LINK_W, STEP, TIP_R, wrap_angle};
 use crate::render::{paint_blob, paint_seg};
+use crate::rng::Rng;
+
+pub const MAX_SAMPLE_TRIES: usize = 10_000;
 
 #[inline]
 pub fn fk(t1: f32, t2: f32, l1: f32, l2: f32) -> (f32, f32, f32, f32) {
@@ -76,5 +81,84 @@ pub fn render_batch(
         paint_seg(frame, img, BASE_X, BASE_Y, ex, ey, LINK_W, 0.5);
         paint_seg(frame, img, ex, ey, tx, ty, LINK_W, 0.8);
         paint_blob(frame, img, tx, ty, TIP_R, 1.0);
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn reset_batch(
+    rng: &mut Rng,
+    lo: f32,
+    hi: f32,
+    t1: &mut [f32],
+    t2: &mut [f32],
+    l1: &mut [f32],
+    l2: &mut [f32],
+    gx: &mut [f32],
+    gy: &mut [f32],
+) {
+    let n = t1.len();
+    assert_eq!(t2.len(), n);
+    assert_eq!(l1.len(), n);
+    assert_eq!(l2.len(), n);
+    assert_eq!(gx.len(), n);
+    assert_eq!(gy.len(), n);
+    let min_dist2 = 0.18_f32 * 0.18_f32;
+
+    for i in 0..n {
+        let len1 = rng.uniform_f32(lo, hi);
+        let len2 = rng.uniform_f32(lo, hi);
+        l1[i] = len1;
+        l2[i] = len2;
+        let rmin = (len1 - len2).abs() + 0.06;
+        let rmax = len1 + len2 - 0.04;
+        let ang = rng.uniform_f32(-PI, PI);
+        let r = rng.uniform_f32(rmin, rmax);
+        let goal_x = BASE_X + ang.cos() * r;
+        let goal_y = BASE_Y + ang.sin() * r;
+        gx[i] = goal_x;
+        gy[i] = goal_y;
+
+        let mut found = false;
+        for _ in 0..MAX_SAMPLE_TRIES {
+            let c1 = rng.uniform_f32(-PI, PI);
+            let c2 = rng.uniform_f32(-PI, PI);
+            let (_, _, tx, ty) = fk(c1, c2, len1, len2);
+            let dx = tx - goal_x;
+            let dy = ty - goal_y;
+            if dx * dx + dy * dy > min_dist2 {
+                t1[i] = c1;
+                t2[i] = c2;
+                found = true;
+                break;
+            }
+        }
+        assert!(
+            found,
+            "reacher_morph::reset_batch exceeded MAX_SAMPLE_TRIES"
+        );
+    }
+}
+
+pub fn rollout_batch(
+    horizon: usize,
+    t1: &mut [f32],
+    t2: &mut [f32],
+    a1: &[f32],
+    a2: &[f32],
+    traj_t1: &mut [f32],
+    traj_t2: &mut [f32],
+) {
+    let n = t1.len();
+    assert_eq!(t2.len(), n);
+    assert_eq!(a1.len(), horizon * n);
+    assert_eq!(a2.len(), horizon * n);
+    assert_eq!(traj_t1.len(), horizon * n);
+    assert_eq!(traj_t2.len(), horizon * n);
+
+    for t in 0..horizon {
+        let off = t * n;
+        step_batch_in_place(t1, t2, &a1[off..off + n], &a2[off..off + n]);
+        traj_t1[off..off + n].copy_from_slice(t1);
+        traj_t2[off..off + n].copy_from_slice(t2);
     }
 }

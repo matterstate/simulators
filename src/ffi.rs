@@ -3,7 +3,8 @@
 use std::slice;
 
 use crate::{
-    armpush, pointmaze, pointmaze_proc, pointpush, reacher, reacher_morph, reacher_obs, sokoban,
+    armpush, pointmaze, pointmaze_proc, pointpush, reacher, reacher_morph, reacher_obs, rng::Rng,
+    sokoban,
 };
 
 /// # Safety
@@ -278,4 +279,301 @@ pub unsafe extern "C" fn ms_armpush_render(
     let oy = unsafe { slice::from_raw_parts(oy, n) };
     let frames = unsafe { slice::from_raw_parts_mut(frames, n * img * img) };
     armpush::render_batch(t1, t2, ox, oy, img, frames);
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_pointmaze_reset(
+    seed: u64,
+    n: usize,
+    x: *mut f32,
+    y: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let x = unsafe { slice::from_raw_parts_mut(x, n) };
+    let y = unsafe { slice::from_raw_parts_mut(y, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    pointmaze::reset_batch(&mut rng, x, y, gx, gy);
+}
+
+/// # Safety
+/// `x`, `y` valid for `n`; `ax`, `ay`, `traj_x`, `traj_y` valid for `horizon * n`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_pointmaze_rollout(
+    horizon: usize,
+    n: usize,
+    x: *mut f32,
+    y: *mut f32,
+    ax: *const f32,
+    ay: *const f32,
+    traj_x: *mut f32,
+    traj_y: *mut f32,
+) {
+    let x = unsafe { slice::from_raw_parts_mut(x, n) };
+    let y = unsafe { slice::from_raw_parts_mut(y, n) };
+    let ax = unsafe { slice::from_raw_parts(ax, horizon * n) };
+    let ay = unsafe { slice::from_raw_parts(ay, horizon * n) };
+    let traj_x = unsafe { slice::from_raw_parts_mut(traj_x, horizon * n) };
+    let traj_y = unsafe { slice::from_raw_parts_mut(traj_y, horizon * n) };
+    pointmaze::rollout_batch(horizon, x, y, ax, ay, traj_x, traj_y);
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_reacher_reset(
+    seed: u64,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    reacher::reset_batch(&mut rng, t1, t2, gx, gy);
+}
+
+/// # Safety
+/// `t1`, `t2` valid for `n`; `a1`, `a2`, `traj_t1`, `traj_t2` valid for `horizon * n`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_reacher_rollout(
+    horizon: usize,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    a1: *const f32,
+    a2: *const f32,
+    traj_t1: *mut f32,
+    traj_t2: *mut f32,
+) {
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let a1 = unsafe { slice::from_raw_parts(a1, horizon * n) };
+    let a2 = unsafe { slice::from_raw_parts(a2, horizon * n) };
+    let traj_t1 = unsafe { slice::from_raw_parts_mut(traj_t1, horizon * n) };
+    let traj_t2 = unsafe { slice::from_raw_parts_mut(traj_t2, horizon * n) };
+    reacher::rollout_batch(horizon, t1, t2, a1, a2, traj_t1, traj_t2);
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_pointpush_reset(
+    seed: u64,
+    n: usize,
+    ax: *mut f32,
+    ay: *mut f32,
+    ox: *mut f32,
+    oy: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let ax = unsafe { slice::from_raw_parts_mut(ax, n) };
+    let ay = unsafe { slice::from_raw_parts_mut(ay, n) };
+    let ox = unsafe { slice::from_raw_parts_mut(ox, n) };
+    let oy = unsafe { slice::from_raw_parts_mut(oy, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    pointpush::reset_batch(&mut rng, ax, ay, ox, oy, gx, gy);
+}
+
+/// # Safety
+/// State pointers valid for `n`; action and trajectory pointers valid for `horizon * n`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ms_pointpush_rollout(
+    horizon: usize,
+    n: usize,
+    ax: *mut f32,
+    ay: *mut f32,
+    ox: *mut f32,
+    oy: *mut f32,
+    act_x: *const f32,
+    act_y: *const f32,
+    traj_ax: *mut f32,
+    traj_ay: *mut f32,
+    traj_ox: *mut f32,
+    traj_oy: *mut f32,
+) {
+    let ax = unsafe { slice::from_raw_parts_mut(ax, n) };
+    let ay = unsafe { slice::from_raw_parts_mut(ay, n) };
+    let ox = unsafe { slice::from_raw_parts_mut(ox, n) };
+    let oy = unsafe { slice::from_raw_parts_mut(oy, n) };
+    let act_x = unsafe { slice::from_raw_parts(act_x, horizon * n) };
+    let act_y = unsafe { slice::from_raw_parts(act_y, horizon * n) };
+    let traj_ax = unsafe { slice::from_raw_parts_mut(traj_ax, horizon * n) };
+    let traj_ay = unsafe { slice::from_raw_parts_mut(traj_ay, horizon * n) };
+    let traj_ox = unsafe { slice::from_raw_parts_mut(traj_ox, horizon * n) };
+    let traj_oy = unsafe { slice::from_raw_parts_mut(traj_oy, horizon * n) };
+    pointpush::rollout_batch(
+        horizon, ax, ay, ox, oy, act_x, act_y, traj_ax, traj_ay, traj_ox, traj_oy,
+    );
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_armpush_reset(
+    seed: u64,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    ox: *mut f32,
+    oy: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let ox = unsafe { slice::from_raw_parts_mut(ox, n) };
+    let oy = unsafe { slice::from_raw_parts_mut(oy, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    armpush::reset_batch(&mut rng, t1, t2, ox, oy, gx, gy);
+}
+
+/// # Safety
+/// State pointers valid for `n`; action and trajectory pointers valid for `horizon * n`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ms_armpush_rollout(
+    horizon: usize,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    ox: *mut f32,
+    oy: *mut f32,
+    a1: *const f32,
+    a2: *const f32,
+    traj_t1: *mut f32,
+    traj_t2: *mut f32,
+    traj_ox: *mut f32,
+    traj_oy: *mut f32,
+) {
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let ox = unsafe { slice::from_raw_parts_mut(ox, n) };
+    let oy = unsafe { slice::from_raw_parts_mut(oy, n) };
+    let a1 = unsafe { slice::from_raw_parts(a1, horizon * n) };
+    let a2 = unsafe { slice::from_raw_parts(a2, horizon * n) };
+    let traj_t1 = unsafe { slice::from_raw_parts_mut(traj_t1, horizon * n) };
+    let traj_t2 = unsafe { slice::from_raw_parts_mut(traj_t2, horizon * n) };
+    let traj_ox = unsafe { slice::from_raw_parts_mut(traj_ox, horizon * n) };
+    let traj_oy = unsafe { slice::from_raw_parts_mut(traj_oy, horizon * n) };
+    armpush::rollout_batch(
+        horizon, t1, t2, ox, oy, a1, a2, traj_t1, traj_t2, traj_ox, traj_oy,
+    );
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ms_reacher_obs_reset(
+    seed: u64,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+    ox: *mut f32,
+    oy: *mut f32,
+    or: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    let ox = unsafe { slice::from_raw_parts_mut(ox, n) };
+    let oy = unsafe { slice::from_raw_parts_mut(oy, n) };
+    let or = unsafe { slice::from_raw_parts_mut(or, n) };
+    reacher_obs::reset_batch(&mut rng, t1, t2, gx, gy, ox, oy, or);
+}
+
+/// # Safety
+/// State/obs pointers valid for `n`; action and trajectory pointers valid for `horizon * n`.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ms_reacher_obs_rollout(
+    horizon: usize,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    a1: *const f32,
+    a2: *const f32,
+    ox: *const f32,
+    oy: *const f32,
+    or: *const f32,
+    traj_t1: *mut f32,
+    traj_t2: *mut f32,
+) {
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let a1 = unsafe { slice::from_raw_parts(a1, horizon * n) };
+    let a2 = unsafe { slice::from_raw_parts(a2, horizon * n) };
+    let ox = unsafe { slice::from_raw_parts(ox, n) };
+    let oy = unsafe { slice::from_raw_parts(oy, n) };
+    let or = unsafe { slice::from_raw_parts(or, n) };
+    let traj_t1 = unsafe { slice::from_raw_parts_mut(traj_t1, horizon * n) };
+    let traj_t2 = unsafe { slice::from_raw_parts_mut(traj_t2, horizon * n) };
+    reacher_obs::rollout_batch(horizon, t1, t2, a1, a2, ox, oy, or, traj_t1, traj_t2);
+}
+
+/// # Safety
+/// All output pointers must be valid for `n` `f32` elements and non-aliasing.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub unsafe extern "C" fn ms_reacher_morph_reset(
+    seed: u64,
+    lo: f32,
+    hi: f32,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    l1: *mut f32,
+    l2: *mut f32,
+    gx: *mut f32,
+    gy: *mut f32,
+) {
+    let mut rng = Rng::seed_from_u64(seed);
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let l1 = unsafe { slice::from_raw_parts_mut(l1, n) };
+    let l2 = unsafe { slice::from_raw_parts_mut(l2, n) };
+    let gx = unsafe { slice::from_raw_parts_mut(gx, n) };
+    let gy = unsafe { slice::from_raw_parts_mut(gy, n) };
+    reacher_morph::reset_batch(&mut rng, lo, hi, t1, t2, l1, l2, gx, gy);
+}
+
+/// # Safety
+/// `t1`, `t2` valid for `n`; `a1`, `a2`, `traj_t1`, `traj_t2` valid for `horizon * n`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn ms_reacher_morph_rollout(
+    horizon: usize,
+    n: usize,
+    t1: *mut f32,
+    t2: *mut f32,
+    a1: *const f32,
+    a2: *const f32,
+    traj_t1: *mut f32,
+    traj_t2: *mut f32,
+) {
+    let t1 = unsafe { slice::from_raw_parts_mut(t1, n) };
+    let t2 = unsafe { slice::from_raw_parts_mut(t2, n) };
+    let a1 = unsafe { slice::from_raw_parts(a1, horizon * n) };
+    let a2 = unsafe { slice::from_raw_parts(a2, horizon * n) };
+    let traj_t1 = unsafe { slice::from_raw_parts_mut(traj_t1, horizon * n) };
+    let traj_t2 = unsafe { slice::from_raw_parts_mut(traj_t2, horizon * n) };
+    reacher_morph::rollout_batch(horizon, t1, t2, a1, a2, traj_t1, traj_t2);
 }
