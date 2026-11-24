@@ -6,6 +6,7 @@ pub mod parallel;
 pub mod pointmaze;
 pub mod pointmaze_proc;
 pub mod pointpush;
+pub mod pusht;
 pub mod reacher;
 pub mod reacher_morph;
 pub mod reacher_obs;

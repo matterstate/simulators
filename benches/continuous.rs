@@ -2,7 +2,8 @@ use std::hint::black_box;
 use std::time::Instant;
 
 use matterstate_envs::{
-    armpush, pointmaze, pointmaze_proc, pointpush, reacher, reacher_morph, reacher_obs, render,
+    armpush, pointmaze, pointmaze_proc, pointpush, pusht, reacher, reacher_morph, reacher_obs,
+    render,
 };
 
 fn bench<F: FnMut()>(name: &str, op: &str, batch: usize, iters: usize, mut f: F) {
@@ -127,5 +128,14 @@ fn main() {
     bench("armpush", "render", batch, render_iters, || {
         armpush::render_batch(&ap_t1, &ap_t2, &ap_ox, &ap_oy, img, &mut frames);
         black_box(&frames);
+    });
+
+    // pusht (2D rigid-body T-block)
+    let mut pt_states = vec![pusht::State::new(290.0, 210.0, 256.0, 256.0, 0.0); batch];
+    let pt_ax = vec![290.0_f32; batch];
+    let pt_ay = vec![300.0_f32; batch];
+    bench("pusht", "step", batch, step_iters / 10, || {
+        pusht::step_batch_in_place(&mut pt_states, &pt_ax, &pt_ay);
+        black_box(&pt_states);
     });
 }
