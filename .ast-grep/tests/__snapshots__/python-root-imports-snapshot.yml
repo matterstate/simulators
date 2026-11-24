@@ -1,0 +1,46 @@
+id: python-root-imports
+snapshots:
+  ? |
+    def run():
+        sys.path.insert(0, "src")
+  : labels:
+    - source: sys.path.insert(0, "src")
+      style: primary
+      start: 15
+      end: 40
+  sys.path += ["src"]:
+    labels:
+    - source: sys.path += ["src"]
+      style: primary
+      start: 0
+      end: 19
+  sys.path = ["src"]:
+    labels:
+    - source: sys.path = ["src"]
+      style: primary
+      start: 0
+      end: 18
+  sys.path.append("src"):
+    labels:
+    - source: sys.path.append("src")
+      style: primary
+      start: 0
+      end: 22
+  sys.path.extend(["src"]):
+    labels:
+    - source: sys.path.extend(["src"])
+      style: primary
+      start: 0
+      end: 24
+  sys.path.insert(0, "src"):
+    labels:
+    - source: sys.path.insert(0, "src")
+      style: primary
+      start: 0
+      end: 25
+  sys.path[:] = ["src"]:
+    labels:
+    - source: sys.path[:] = ["src"]
+      style: primary
+      start: 0
+      end: 21

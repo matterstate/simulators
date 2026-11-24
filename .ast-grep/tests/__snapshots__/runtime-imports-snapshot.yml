@@ -1,0 +1,34 @@
+id: runtime-imports
+snapshots:
+  ? |
+    def step():
+        import torch
+  : labels:
+    - source: import torch
+      style: primary
+      start: 16
+      end: 28
+  from ogbench import make_env_and_datasets:
+    labels:
+    - source: from ogbench import make_env_and_datasets
+      style: primary
+      start: 0
+      end: 41
+  from train.explog import log_result:
+    labels:
+    - source: from train.explog import log_result
+      style: primary
+      start: 0
+      end: 35
+  import gym_pusht:
+    labels:
+    - source: import gym_pusht
+      style: primary
+      start: 0
+      end: 16
+  import gymnasium as gym:
+    labels:
+    - source: import gymnasium as gym
+      style: primary
+      start: 0
+      end: 23

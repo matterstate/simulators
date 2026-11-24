@@ -1,0 +1,14 @@
+id: runtime-imports
+language: Python
+severity: error
+message: External engines and research code belong in tests, not runtime kernels.
+files:
+  - matterstate_envs/**/*.py
+rule:
+  any:
+    - pattern: import $MODULE as $ALIAS
+    - pattern: import $MODULE
+    - pattern: from $MODULE import $$$NAMES
+constraints:
+  MODULE:
+    regex: "^(gym|gymnasium|gym_pusht|gymnasium_robotics|ogbench|torch|train|evals|model)(\\.|$)"

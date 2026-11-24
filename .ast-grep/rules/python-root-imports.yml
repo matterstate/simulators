@@ -1,0 +1,12 @@
+id: python-root-imports
+language: Python
+severity: error
+message: Use explicit root-package imports and python -m; do not mutate sys.path.
+rule:
+  any:
+    - pattern: sys.path.insert($$$ARGS)
+    - pattern: sys.path.append($$$ARGS)
+    - pattern: sys.path.extend($$$ARGS)
+    - pattern: sys.path = $VALUE
+    - pattern: sys.path += $VALUE
+    - pattern: sys.path[$INDEX] = $VALUE

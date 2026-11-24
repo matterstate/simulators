@@ -1,0 +1,16 @@
+id: python-root-imports
+valid:
+  - 'from model.jepa_pix import encode'
+  - 'paths.insert(0, "source")'
+  - 'message = "sys.path.insert(0, path)"'
+  - 'entries = list(sys.path)'
+invalid:
+  - 'sys.path.insert(0, "src")'
+  - 'sys.path.append("src")'
+  - 'sys.path.extend(["src"])'
+  - 'sys.path = ["src"]'
+  - 'sys.path += ["src"]'
+  - 'sys.path[:] = ["src"]'
+  - |
+    def run():
+        sys.path.insert(0, "src")
