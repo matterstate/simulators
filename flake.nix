@@ -72,6 +72,7 @@
                 cargo fmt --check
                 cargo clippy --all-targets -- -D warnings
                 cargo test --quiet
+                cargo build --release --lib --quiet
                 ast-grep test
                 ast-grep scan
                 uv run --frozen --group reference python -m pytest -q -p no:cacheprovider tests

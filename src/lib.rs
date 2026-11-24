@@ -1,6 +1,7 @@
 //! Native simulator kernels for Matterstate.
 
 pub mod armpush;
+pub mod ffi;
 pub mod pointmaze;
 pub mod pointmaze_proc;
 pub mod pointpush;

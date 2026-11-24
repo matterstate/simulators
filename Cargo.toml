@@ -7,6 +7,7 @@ description = "Fast native simulator kernels for Matterstate"
 [lib]
 name = "matterstate_envs"
 path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
 
 [[bench]]
 name = "sokoban"
