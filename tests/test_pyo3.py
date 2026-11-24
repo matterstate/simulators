@@ -49,3 +49,21 @@ def test_pyo3_reacher_render() -> None:
     t2 = np.ascontiguousarray(theta[:, 1])
     frames = matterstate_envs_rs.reacher_render(t1, t2, 48)
     np.testing.assert_array_equal(frames[..., None], reacher.render(theta))
+
+
+def test_pyo3_pusht_rgb_and_ogbench_maze() -> None:
+    state = np.array([290.0, 190.0, 0.0, 0.0, 256.0, 301.0, 0.0], np.float32)
+    cov = matterstate_envs_rs.pusht_step(state, 290.0, 320.0)
+    assert 0.0 <= cov <= 1.0
+    rgb = matterstate_envs_rs.pusht_render_rgb(state, 96)
+    assert rgb.shape == (96, 96, 3)
+    assert rgb.dtype == np.uint8
+
+    x = np.array([6.0], np.float32)
+    y = np.array([6.0], np.float32)
+    vx = np.array([0.0], np.float32)
+    vy = np.array([0.0], np.float32)
+    fx = np.array([1.0], np.float32)
+    fy = np.array([0.0], np.float32)
+    matterstate_envs_rs.ogbench_maze_step_in_place(x, y, vx, vy, fx, fy)
+    assert x[0] > 6.0

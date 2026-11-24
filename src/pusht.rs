@@ -254,6 +254,60 @@ impl State {
         }
         inside as f32 / total as f32
     }
+
+    /// Render a `size x size x 3` RGB `u8` frame (default 96x96) into `rgb`.
+    /// Colors match `gym_pusht`: White bg, LightGreen goal, LightSlateGray block, RoyalBlue agent.
+    pub fn render_rgb(&self, size: usize, rgb: &mut [u8]) {
+        assert_eq!(rgb.len(), size * size * 3);
+        rgb.fill(255);
+
+        let scale = ARENA / size as f32;
+        let g_cos = GOAL_ANGLE.cos();
+        let g_sin = GOAL_ANGLE.sin();
+        let b_cos = self.block_angle.cos();
+        let b_sin = self.block_angle.sin();
+        let r2 = AGENT_R * AGENT_R;
+
+        for py in 0..size {
+            let wy = (py as f32 + 0.5) * scale;
+            let row_off = py * size * 3;
+            for px in 0..size {
+                let wx = (px as f32 + 0.5) * scale;
+                let off = row_off + px * 3;
+
+                // 1. Goal T-block (LightGreen: 144, 238, 144)
+                let gx = wx - GOAL_X;
+                let gy = wy - GOAL_Y;
+                let glx = gx * g_cos + gy * g_sin;
+                let gly = -gx * g_sin + gy * g_cos;
+                if Self::point_in_local_tee(glx, gly) {
+                    rgb[off] = 144;
+                    rgb[off + 1] = 238;
+                    rgb[off + 2] = 144;
+                }
+
+                // 2. Active T-block (LightSlateGray: 119, 136, 153)
+                let bx = wx - self.block_x;
+                let by = wy - self.block_y;
+                let blx = bx * b_cos + by * b_sin;
+                let bly = -bx * b_sin + by * b_cos;
+                if Self::point_in_local_tee(blx, bly) {
+                    rgb[off] = 119;
+                    rgb[off + 1] = 136;
+                    rgb[off + 2] = 153;
+                }
+
+                // 3. Agent circle (RoyalBlue: 65, 105, 225)
+                let ax = wx - self.agent_x;
+                let ay = wy - self.agent_y;
+                if ax * ax + ay * ay <= r2 {
+                    rgb[off] = 65;
+                    rgb[off + 1] = 105;
+                    rgb[off + 2] = 225;
+                }
+            }
+        }
+    }
 }
 
 pub fn reset_batch(rng: &mut Rng, states: &mut [State]) {

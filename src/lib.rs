@@ -2,6 +2,7 @@
 
 pub mod armpush;
 pub mod ffi;
+pub mod ogbench_maze;
 pub mod parallel;
 pub mod pointmaze;
 pub mod pointmaze_proc;
