@@ -18,6 +18,6 @@ This is a simulator library, not a planner or training repository.
 - Use `nix develop`, `uv sync --frozen --group reference`, then `check`.
   Format changed Python with the pinned Ruff and Nix with nixfmt first.
   CI runs the same non-mutating source checks and tests.
-- Review snapshot changes. `VERIFY.md` documents the contract map and bounds.
+- Review snapshot changes before accepting them.
 - Keep datasets, binaries, native build products, and environments Git-ignored.
   Root `.gitignore` is default-deny. Narrowly allow intentional new source.

@@ -1,4 +1,4 @@
-"""Byte-level snapshots captured from latent-planner before extraction."""
+"""Byte-level regression snapshots for simulator kernels."""
 
 import hashlib
 

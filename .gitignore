@@ -6,7 +6,6 @@
 !/CHANGELOG.md
 !/LICENSE
 !/README.md
-!/VERIFY.md
 !/flake.nix
 !/flake.lock
 !/Cargo.toml

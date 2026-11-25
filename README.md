@@ -88,7 +88,7 @@ check
 unit/SIMD tests, property-based tests (`tests/test_properties.py`), Rust-vs-NumPy
 C-ABI & PyO3 parity tests (`tests/test_rust_parity.py`, `tests/test_pyo3.py`),
 and external reference parity against `gym-sokoban` and `pymunk`
-(`tests/reference/`). See `VERIFY.md` for details.
+(`tests/reference/`).
 
 ## License
 
