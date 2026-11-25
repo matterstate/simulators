@@ -43,6 +43,5 @@ select = ["E", "F", "I", "W"]
 convention = "google"
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
 testpaths = ["tests"]
 markers = ["reference: requires the test-only external reference engines"]
