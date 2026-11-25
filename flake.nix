@@ -77,7 +77,7 @@
                 cargo build --release --lib --quiet
                 ast-grep test
                 ast-grep scan
-                uv run --frozen --group reference python -m pytest -q -p no:cacheprovider tests
+                uv run --frozen --group reference pytest -q -p no:cacheprovider tests
                 uv run --project tests/reference/ogbench --frozen --python "$OGBENCH_PYTHON" python -c "import ogbench"
               '';
             }
