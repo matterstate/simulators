@@ -17,6 +17,8 @@
 !/src/**/*.rs
 !/benches/**/*.rs
 !/matterstate_envs/**/*.py
+!/matterstate_envs/**/*.pyi
+!/matterstate_envs/py.typed
 !/benchmarks/**/*.py
 !/tests/**/*.py
 !/tests/**/*.ambr

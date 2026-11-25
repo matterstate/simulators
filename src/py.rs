@@ -127,12 +127,19 @@ fn pointmaze_proc_step_in_place<'py>(
     {
         return Err(PyValueError::new_err("mismatched batch lengths"));
     }
-    let wall_grids: Vec<[bool; pointmaze_proc::WALL_CELLS]> = ws
-        .chunks_exact(pointmaze_proc::WALL_CELLS)
-        .map(|c| c.try_into().unwrap())
-        .collect();
+    let wall_grids = copy_wall_grids(ws);
     pointmaze_proc::step_batch_in_place(xs, ys, axs, ays, &wall_grids);
     Ok(())
+}
+
+fn copy_wall_grids(ws: &[bool]) -> Vec<[bool; pointmaze_proc::WALL_CELLS]> {
+    ws.chunks_exact(pointmaze_proc::WALL_CELLS)
+        .map(|c| {
+            let mut grid = [false; pointmaze_proc::WALL_CELLS];
+            grid.copy_from_slice(c);
+            grid
+        })
+        .collect()
 }
 
 #[pyfunction]
@@ -150,10 +157,7 @@ fn pointmaze_proc_render<'py>(
     if ys.len() != n || ws.len() != n * pointmaze_proc::WALL_CELLS {
         return Err(PyValueError::new_err("mismatched batch lengths"));
     }
-    let wall_grids: Vec<[bool; pointmaze_proc::WALL_CELLS]> = ws
-        .chunks_exact(pointmaze_proc::WALL_CELLS)
-        .map(|c| c.try_into().unwrap())
-        .collect();
+    let wall_grids = copy_wall_grids(ws);
     let mut frames = vec![0.0_f32; n * render::IMG * render::IMG];
     pointmaze_proc::render_batch(xs, ys, &wall_grids, r_px, &mut frames);
     Ok(PyArray1::from_vec(py, frames).reshape([n, render::IMG, render::IMG])?)

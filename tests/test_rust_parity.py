@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 from pathlib import Path
 
 import numpy as np
@@ -18,12 +19,12 @@ from matterstate_envs import (
     sokoban,
 )
 
-LIB_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "target"
-    / "release"
-    / "libmatterstate_envs.so"
+_TARGET_DIR = Path(
+    os.environ.get(
+        "CARGO_TARGET_DIR", Path(__file__).resolve().parents[1] / "target"
+    )
 )
+LIB_PATH = _TARGET_DIR / "release" / "libmatterstate_envs.so"
 
 _F32_P = ctypes.POINTER(ctypes.c_float)
 _U8_P = ctypes.POINTER(ctypes.c_uint8)
