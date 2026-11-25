@@ -16,6 +16,7 @@ batches of distinct mazes at once.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -62,7 +63,12 @@ def _largest_cc(
 
 
 # -> walls:(n,G,G) bool (True = wall)
-def sample_mazes(rng, n, wall_prob=0.22, min_free=16):
+def sample_mazes(
+    rng: np.random.Generator,
+    n: int,
+    wall_prob: float = 0.22,
+    min_free: int = 16,
+) -> NDArray[np.bool_]:
     walls = np.ones((n, G, G), bool)
     for k in range(n):
         for _ in range(MAX_SAMPLE_TRIES):
@@ -81,17 +87,25 @@ def _cell(pos):  # pos:(B,2) in [0,1] -> (col,row) int cell
     return np.clip(np.floor(pos * G).astype(int), 0, G - 1)
 
 
-def in_wall(pos, walls):  # pos:(B,2), walls:(B,G,G) -> bool(B)
+def in_wall(
+    pos: NDArray[np.float32], walls: NDArray[np.bool_]
+) -> NDArray[np.bool_]:  # pos:(B,2), walls:(B,G,G) -> bool(B)
     c = _cell(pos)
     return walls[np.arange(len(pos)), c[:, 1], c[:, 0]]
 
 
-def step(pos, action, walls):  # blocked moves stay put (per-maze walls)
+def step(
+    pos: NDArray[np.float32],
+    action: NDArray[np.float32],
+    walls: NDArray[np.bool_],
+) -> NDArray[np.float32]:  # blocked moves stay put (per-maze walls)
     nxt = np.clip(pos + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
     return np.where(in_wall(nxt, walls)[:, None], pos, nxt)
 
 
-def solved(pos, goal):
+def solved(
+    pos: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return np.linalg.norm(pos - goal, axis=-1) < GOAL_THRESH
 
 
@@ -129,7 +143,9 @@ def _walls_img(walls):  # (B,G,G) -> (B,IMG,IMG) float, wall cell = 0.4
 
 
 # (B,2),(B,G,G) -> (B,IMG,IMG,1): agent blob over the walls
-def render(pos, walls, r=1.5):
+def render(
+    pos: NDArray[np.float32], walls: NDArray[np.bool_], r: float = 1.5
+) -> NDArray[np.float32]:
     if _rs is not None and pos.dtype == np.float32 and walls.dtype == np.bool_:
         return _rs.pointmaze_proc_render(
             np.ascontiguousarray(pos[:, 0]),

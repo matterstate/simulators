@@ -13,6 +13,7 @@ Reuses reacher fk/step/joint-velocity control. Pure vectorized numpy.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -48,7 +49,9 @@ def _seg_circle_dist(p0, p1, c):
 
 
 # (B,) min distance from either link to the obstacle CENTER (collide if < r)
-def link_obstacle_dist(theta, obs):
+def link_obstacle_dist(
+    theta: NDArray[np.float32], obs: NDArray[np.float32]
+) -> NDArray[np.float32]:
     elbow, ee = fk(theta)
     b = np.broadcast_to(BASE, elbow.shape)
     c = obs[:, :2]
@@ -58,19 +61,27 @@ def link_obstacle_dist(theta, obs):
 
 
 # obs:(B,3)=[cx,cy,r] -> (B,) bool: either link enters the obstacle disk
-def collides(theta, obs):
+def collides(
+    theta: NDArray[np.float32], obs: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return link_obstacle_dist(theta, obs) < obs[:, 2]
 
 
 # joint-velocity step, but a colliding move is BLOCKED (arm stays put)
-def step_obs(theta, action, obs):
+def step_obs(
+    theta: NDArray[np.float32],
+    action: NDArray[np.float32],
+    obs: NDArray[np.float32],
+) -> NDArray[np.float32]:
     proposed = step(theta, action)
     return np.where(collides(proposed, obs)[:, None], theta, proposed).astype(
         np.float32
     )
 
 
-def solved(theta, goal):
+def solved(
+    theta: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return np.linalg.norm(tip(theta) - goal, axis=-1) < GOAL_THRESH
 
 

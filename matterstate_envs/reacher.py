@@ -18,6 +18,7 @@ encoder can read the arm pose from pixels.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -38,37 +39,43 @@ LINK_W = 0.018  # render half-thickness of a link
 MAX_SAMPLE_TRIES = 10_000
 
 
-def fk(theta):  # theta:(B,2) -> elbow:(B,2), tip:(B,2)  forward kinematics
+def fk(
+    theta: NDArray[np.float32],
+) -> tuple[
+    NDArray[np.float32], NDArray[np.float32]
+]:  # theta:(B,2) -> elbow:(B,2), tip:(B,2)  forward kinematics
     t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
     elbow = BASE + L1 * np.stack([np.cos(t1), np.sin(t1)], -1)
     tip = elbow + L2 * np.stack([np.cos(t12), np.sin(t12)], -1)
     return elbow.astype(np.float32), tip.astype(np.float32)
 
 
-def tip(theta):
+def tip(theta: NDArray[np.float32]) -> NDArray[np.float32]:
     return fk(theta)[1]
 
 
 # theta,action:(B,2) -> next theta (joint-velocity control, angles wrap to
 # [-pi,pi])
 def step(
-    theta,
-    action,
-):
+    theta: NDArray[np.float32],
+    action: NDArray[np.float32],
+) -> NDArray[np.float32]:
     th = theta + np.clip(action, -1.0, 1.0) * STEP
     return ((th + np.pi) % (2 * np.pi) - np.pi).astype(np.float32)
 
 
-def solved(theta, goal):
+def solved(
+    theta: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return np.linalg.norm(tip(theta) - goal, axis=-1) < GOAL_THRESH
 
 
 # theta, goal — goal a reachable point, start tip far enough to need real
 # motion
 def reset(
-    rng,
-    n,
-):
+    rng: np.random.Generator,
+    n: int,
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     theta = rng.uniform(-np.pi, np.pi, (n, 2)).astype(np.float32)
     ang = rng.uniform(-np.pi, np.pi, n)
     r = rng.uniform(abs(L1 - L2) + 0.06, L1 + L2 - 0.04, n)
@@ -112,7 +119,7 @@ def _blob(frame, pos, r, val):
 
 
 # (B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)
-def render(theta, img=48):
+def render(theta: NDArray[np.float32], img: int = 48) -> NDArray[np.float32]:
     if _rs is not None and theta.dtype == np.float32:
         t1 = np.ascontiguousarray(theta[:, 0])
         t2 = np.ascontiguousarray(theta[:, 1])
@@ -127,7 +134,9 @@ def render(theta, img=48):
 
 
 # Jacobian-transpose descent on ||tip - goal||^2 (solvability check)
-def oracle_action(theta, goal):
+def oracle_action(
+    theta: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.float32]:
     t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
     s1, c1 = np.sin(t1), np.cos(t1)
     s12, c12 = np.sin(t12), np.cos(t12)

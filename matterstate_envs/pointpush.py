@@ -17,6 +17,7 @@ conv encoder can localize both.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -32,7 +33,13 @@ IMG = 48
 MAX_SAMPLE_TRIES = 10_000
 
 
-def step(agent, obj, action):  # agent,obj,action:(B,2) -> next agent,obj
+def step(
+    agent: NDArray[np.float32],
+    obj: NDArray[np.float32],
+    action: NDArray[np.float32],
+) -> tuple[
+    NDArray[np.float32], NDArray[np.float32]
+]:  # agent,obj,action:(B,2) -> next agent,obj
     a = np.clip(agent + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
     d = a - obj
     dist = np.linalg.norm(d, axis=-1, keepdims=True)
@@ -49,12 +56,16 @@ def step(agent, obj, action):  # agent,obj,action:(B,2) -> next agent,obj
     return np.clip(a, 0.0, 1.0), obj_new
 
 
-def solved(obj, goal):
+def solved(
+    obj: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return np.linalg.norm(obj - goal, axis=-1) < GOAL_THRESH
 
 
 # agent, object, goal — object/goal far enough apart to need real pushing
-def reset(rng, n):
+def reset(
+    rng: np.random.Generator, n: int
+) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
     obj = rng.uniform(0.15, 0.85, (n, 2))
     goal = rng.uniform(0.15, 0.85, (n, 2))
     close = np.linalg.norm(obj - goal, axis=-1) < 0.35
@@ -85,7 +96,11 @@ def _blob(frame, pos, r, val):
 
 
 # (B,2),(B,2) -> (B,img,img,1): object (0.55) under agent (1.0)
-def render(agent, obj, img=48):
+def render(
+    agent: NDArray[np.float32],
+    obj: NDArray[np.float32],
+    img: int = 48,
+) -> NDArray[np.float32]:
     if (
         _rs is not None
         and agent.dtype == np.float32
@@ -105,7 +120,11 @@ def render(agent, obj, img=48):
 
 
 # scripted pusher (for solvability check): get behind object, push to goal
-def oracle_action(agent, obj, goal):
+def oracle_action(
+    agent: NDArray[np.float32],
+    obj: NDArray[np.float32],
+    goal: NDArray[np.float32],
+) -> NDArray[np.float32]:
     to_goal = goal - obj
     tg = to_goal / (np.linalg.norm(to_goal, axis=-1, keepdims=True) + 1e-9)
     behind = obj - tg * (

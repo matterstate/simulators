@@ -19,6 +19,7 @@ target.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -40,7 +41,7 @@ N_ACT = 4
 H = W = 10
 
 
-def load_levels(path, limit=None):
+def load_levels(path: str, limit: int | None = None) -> NDArray[np.int8]:
     """Parse a boxoban .txt (blocks of `; idx` + 10 grid lines) → (N, H*W) int8
     grids.
     """
@@ -71,7 +72,7 @@ def load_levels(path, limit=None):
     return np.stack(grids)
 
 
-def step(grid, action):
+def step(grid: NDArray[np.int8], action: int) -> tuple[NDArray[np.int8], bool]:
     """Apply one move to a flat grid (H*W,). Returns the next grid (a copy).
     Illegal
     moves (into a wall, or pushing a box into a wall/box) are no-ops — the
@@ -101,7 +102,7 @@ def step(grid, action):
     return g.ravel()
 
 
-def make_solved(grid):
+def make_solved(grid: NDArray[np.int8]) -> NDArray[np.int8]:
     """A solved board sharing this level's walls/targets: every target holds a
     box,
     the player sits on some free floor. (#boxes == #targets in boxoban, so
@@ -118,7 +119,7 @@ def make_solved(grid):
     return g.ravel()
 
 
-def reverse_predecessors(grid):
+def reverse_predecessors(grid: NDArray[np.int8]) -> list[NDArray[np.int8]]:
     """All (predecessor, action) with step(predecessor, action) == grid — i.e.
     the
     forward move `action` carries predecessor → grid. Inverts step()'s two
@@ -154,10 +155,10 @@ def reverse_predecessors(grid):
     return out
 
 
-def solved(grid):
+def solved(grid: NDArray[np.int8]) -> bool:
     """True iff every box sits on a target (no bare BOX cells left)."""
     return not (np.asarray(grid) == BOX).any()
 
 
-def n_on_target(grid):
+def n_on_target(grid: NDArray[np.int8]) -> int:
     return int((np.asarray(grid) == BOX_T).sum())

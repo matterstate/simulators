@@ -12,6 +12,7 @@ per-batch L=(B,2)=[L1,L2].
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -32,27 +33,41 @@ L_OOD = (0.28, 0.33)  # held-out longer arms (extrapolation)
 MAX_SAMPLE_TRIES = 10_000
 
 
-def sample_L(rng, n, lo, hi):
+def sample_L(
+    rng: np.random.Generator, n: int, lo: float, hi: float
+) -> NDArray[np.float32]:
     return rng.uniform(lo, hi, (n, 2)).astype(np.float32)
 
 
-def fk(theta, L):  # theta:(B,2), L:(B,2) -> elbow, tip
+def fk(
+    theta: NDArray[np.float32], L: NDArray[np.float32]
+) -> tuple[
+    NDArray[np.float32], NDArray[np.float32]
+]:  # theta:(B,2), L:(B,2) -> elbow, tip
     t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
     elbow = BASE + L[:, 0:1] * np.stack([np.cos(t1), np.sin(t1)], -1)
     tip = elbow + L[:, 1:2] * np.stack([np.cos(t12), np.sin(t12)], -1)
     return elbow.astype(np.float32), tip.astype(np.float32)
 
 
-def tip(theta, L):
+def tip(
+    theta: NDArray[np.float32], L: NDArray[np.float32]
+) -> NDArray[np.float32]:
     return fk(theta, L)[1]
 
 
-def step(theta, action):  # joint-velocity control (morphology-independent)
+def step(
+    theta: NDArray[np.float32], action: NDArray[np.float32]
+) -> NDArray[np.float32]:  # joint-velocity control (morphology-independent)
     th = theta + np.clip(action, -1.0, 1.0) * STEP
     return ((th + np.pi) % (2 * np.pi) - np.pi).astype(np.float32)
 
 
-def solved(theta, L, goal):
+def solved(
+    theta: NDArray[np.float32],
+    L: NDArray[np.float32],
+    goal: NDArray[np.float32],
+) -> NDArray[np.bool_]:
     return np.linalg.norm(tip(theta, L) - goal, axis=-1) < GOAL_THRESH
 
 
@@ -83,7 +98,9 @@ def reset(
 
 
 # (B,2),(B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)
-def render(theta, L, img=48):
+def render(
+    theta: NDArray[np.float32], L: NDArray[np.float32], img: int = 48
+) -> NDArray[np.float32]:
     if _rs is not None and theta.dtype == np.float32 and L.dtype == np.float32:
         return _rs.reacher_morph_render(
             np.ascontiguousarray(theta[:, 0]),
@@ -102,7 +119,11 @@ def render(theta, L, img=48):
 
 
 # Jacobian-transpose descent with per-batch link lengths
-def oracle_action(theta, L, goal):
+def oracle_action(
+    theta: NDArray[np.float32],
+    L: NDArray[np.float32],
+    goal: NDArray[np.float32],
+) -> NDArray[np.float32]:
     t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
     s1, c1, s12, c12 = np.sin(t1), np.cos(t1), np.sin(t12), np.cos(t12)
     l1, l2 = L[:, 0], L[:, 1]

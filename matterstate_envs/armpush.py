@@ -17,6 +17,7 @@ reacher FK/step and PointPush's contact model.
 """
 
 import numpy as np
+from numpy.typing import NDArray
 
 try:
     from matterstate_envs import _rs
@@ -48,13 +49,19 @@ def _contact_push(tip, obj):
 
 
 # theta,action:(B,2), obj:(B,2) -> next theta, obj
-def step(theta, obj, action):
+def step(
+    theta: NDArray[np.float32],
+    obj: NDArray[np.float32],
+    action: NDArray[np.float32],
+) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     theta = RE.step(theta, action)
     tip = RE.tip(theta)
     return theta, _contact_push(tip, obj)
 
 
-def solved(obj, goal):
+def solved(
+    obj: NDArray[np.float32], goal: NDArray[np.float32]
+) -> NDArray[np.bool_]:
     return np.linalg.norm(obj - goal, axis=-1) < GOAL_THRESH
 
 
