@@ -14,10 +14,10 @@ This is a simulator library, not a planner or training repository.
   Never weaken a parity check simply to make a replacement pass.
 - Keep kernel optimization separate from extraction. Measure performance before
   claiming a speedup. New compute implementations should follow the global
-  language rules; this initial extraction retains the existing NumPy code.
+  language rules. This initial extraction retains the existing NumPy code.
 - Use `nix develop`, `uv sync --frozen --group reference`, then `check`.
   Format changed Python with the pinned Ruff and Nix with nixfmt first.
   CI runs the same non-mutating source checks and tests.
 - Review snapshot changes. `VERIFY.md` documents the contract map and bounds.
 - Keep datasets, binaries, native build products, and environments Git-ignored.
-  Root `.gitignore` is default-deny; narrowly allow intentional new source.
+  Root `.gitignore` is default-deny. Narrowly allow intentional new source.

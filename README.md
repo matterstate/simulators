@@ -59,7 +59,7 @@ RUSTFLAGS="-C target-cpu=native" cargo bench --bench scaling
 | Kernel | Op | Batch | NumPy items/s | Rust items/s | Speedup |
 |---|---|---:|---:|---:|---:|
 | `sokoban` | `step` | 1 | 24,435 | 287,014,016 | ~11,700× |
-| `sokoban` | `step` | 64 | — | 530,216,961 | ~21,700× vs B=1 |
+| `sokoban` | `step` | 64 | n/a | 530,216,961 | ~21,700× vs B=1 |
 | `pointmaze` | `step` (AVX2+FMA) | 1,024 | 2,912,704 (B=64) | 5,339,556,094 | ~1,830× |
 | `pointmaze_proc` | `step` | 64 | 2,796,923 | 176,524,554 | ~63× |
 | `pointmaze_proc` | `render` | 64 | 29,228 | 6,427,694 | ~220× |
@@ -73,7 +73,7 @@ RUSTFLAGS="-C target-cpu=native" cargo bench --bench scaling
 | `reacher_obs` | `render` | 64 | 1,534 | 1,888,573 | ~1,231× |
 | `armpush` | `step` | 64 | 1,060,090 | 45,257,876 | ~43× |
 | `armpush` | `render` | 64 | 1,677 | 1,803,951 | ~1,076× |
-| `pusht` | `step` (10 substeps) | 64 | — | 1,272,912 | — |
+| `pusht` | `step` (10 substeps) | 64 | n/a | 1,272,912 | n/a |
 
 ## Verification & Development
 
@@ -92,4 +92,4 @@ and external reference parity against `gym-sokoban` and `pymunk`
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
