@@ -29,6 +29,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Install locked test and reference dependencies
-        run: nix develop --command uv sync --frozen --group reference
+        run: nix develop --command uv sync --frozen --group reference --reinstall-package matterstate-envs
       - name: Verify source and parity contracts
         run: nix develop --command check
