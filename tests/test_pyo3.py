@@ -96,3 +96,42 @@ def test_pyo3_pusht_reset_coverage_rollout_and_sudoku() -> None:
     assert puz.dtype == np.int8
     assert sol.dtype == np.int8
     assert ((sol >= 1) & (sol <= 4)).all()
+
+
+def test_public_rust_wrappers() -> None:
+    from matterstate_envs import ogbench_maze, pusht, sudoku
+
+    states = pusht.reset(4, seed=7)
+    assert states.shape == (4, 7)
+    covs = pusht.coverage(states)
+    assert covs.shape == (4,)
+
+    s0 = states[0].copy()
+    c0 = pusht.step(s0, 256.0, 256.0)
+    assert 0.0 <= c0 <= 1.0
+    rgb0 = pusht.render_rgb(s0)
+    assert rgb0.shape == (96, 96, 3)
+
+    tx = np.full(4, 256.0, np.float32)
+    ty = np.full(4, 256.0, np.float32)
+    batch_cov = pusht.step_batch(states, tx, ty)
+    assert batch_cov.shape == (4,)
+    rgbs = pusht.render_rgb_batch(states, size=64)
+    assert rgbs.shape == (4, 64, 64, 3)
+
+    traj = pusht.rollout(3, states, np.tile(tx, 3), np.tile(ty, 3))
+    assert traj.shape == (3, 4, 7)
+
+    x = np.array([6.0], np.float32)
+    y = np.array([6.0], np.float32)
+    vx = np.zeros(1, np.float32)
+    vy = np.zeros(1, np.float32)
+    fx = np.array([1.0], np.float32)
+    fy = np.zeros(1, np.float32)
+    ogbench_maze.step_medium_in_place(x, y, vx, vy, fx, fy)
+    ogbench_maze.step_large_in_place(x, y, vx, vy, fx, fy)
+    assert x[0] > 6.0
+
+    puz, sol = sudoku.generate(4, 2, 0.5, seed=7, unique_only=True)
+    assert puz.shape == (2, 16)
+    assert sol.shape == (2, 16)

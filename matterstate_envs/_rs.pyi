@@ -181,33 +181,31 @@ def armpush_render(
     gx: NDArray[np.float32],
     gy: NDArray[np.float32],
 ) -> NDArray[np.float32]: ...
-def pusht_reset(n: int, seed: int = 0) -> NDArray[np.float32]: ...
-def pusht_coverage(bx: float, by: float, ba: float) -> float: ...
+def pusht_reset(seed: int, batch: int) -> NDArray[np.float32]: ...
+def pusht_coverage(states: NDArray[np.float32]) -> NDArray[np.float32]: ...
 def pusht_step(
     state: NDArray[np.float32],
-    tx: float,
-    ty: float,
-) -> tuple[NDArray[np.float32], float]: ...
+    action_x: float,
+    action_y: float,
+) -> float: ...
 def pusht_step_batch(
     states: NDArray[np.float32],
-    tx: NDArray[np.float32],
-    ty: NDArray[np.float32],
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]: ...
+    ax: NDArray[np.float32],
+    ay: NDArray[np.float32],
+) -> NDArray[np.float32]: ...
 def pusht_rollout(
     horizon: int,
     states: NDArray[np.float32],
-    tx: NDArray[np.float32],
-    ty: NDArray[np.float32],
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]: ...
+    ax: NDArray[np.float32],
+    ay: NDArray[np.float32],
+) -> NDArray[np.float32]: ...
 def pusht_render_rgb(
-    ax: float,
-    ay: float,
-    bx: float,
-    by: float,
-    ba: float,
+    state: NDArray[np.float32],
+    size: int,
 ) -> NDArray[np.uint8]: ...
 def pusht_render_rgb_batch(
     states: NDArray[np.float32],
+    size: int,
 ) -> NDArray[np.uint8]: ...
 def ogbench_maze_step_in_place(
     x: NDArray[np.float32],
