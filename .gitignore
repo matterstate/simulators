@@ -19,6 +19,7 @@
 !/matterstate_envs/py.typed
 !/benchmarks/**/*.py
 !/tests/**/*.py
+!/tests/**/*.rs
 !/tests/**/*.ambr
 !/tests/reference/ogbench/pyproject.toml
 !/tests/reference/ogbench/uv.lock

@@ -21,6 +21,9 @@ python = ["dep:pyo3", "dep:numpy"]
 numpy = { version = "0.24", optional = true }
 pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 
+[dev-dependencies]
+hegeltest = "0.54"
+
 [[bench]]
 name = "sokoban"
 harness = false
