@@ -12,8 +12,8 @@ def sokoban_step(
     action: int,
 ) -> NDArray[np.int8]: ...
 def pointmaze_reset(
-    n: int,
-    seed: int = 0,
+    seed: int,
+    batch: int,
 ) -> tuple[
     NDArray[np.float32],
     NDArray[np.float32],
@@ -47,8 +47,8 @@ def pointmaze_proc_render(
     r_px: float,
 ) -> NDArray[np.float32]: ...
 def pointpush_reset(
-    n: int,
-    seed: int = 0,
+    seed: int,
+    batch: int,
 ) -> tuple[
     NDArray[np.float32],
     NDArray[np.float32],
@@ -88,8 +88,8 @@ def pointpush_render(
     gy: NDArray[np.float32],
 ) -> NDArray[np.float32]: ...
 def reacher_reset(
-    n: int,
-    seed: int = 0,
+    seed: int,
+    batch: int,
 ) -> tuple[
     NDArray[np.float32],
     NDArray[np.float32],
