@@ -1,147 +1,55 @@
-"""PointPush — a 2D contact/pushing task: move an OBJECT to a goal by pushing
-it with a point agent.
+"""2D PointPush backed by the Rust core."""
 
-The north-star step toward manipulation: control is INDIRECT (the agent only
-moves the object on contact) and the
-goal is on the OBJECT, not the agent — so the planner must position the
-agent behind the object and push it toward
-the goal. Contact model: the agent moves under velocity control; when it
-overlaps the object, the object is shoved
-to sit exactly at contact distance on the far side (and the agent is
-prevented from penetrating a wall-pinned
-object). Irreversible-ish (object can be pinned in a corner) → needs
-planning.
+from matterstate_envs import _rs
 
-Pure vectorized numpy; render shows agent (bright) + object (mid) blobs so a
-conv encoder can localize both.
-"""
+IMG: int = _rs.IMG
 
-import numpy as np
-from numpy.typing import NDArray
 
-try:
-    from matterstate_envs import _rs
-except ImportError:
-    _rs = None
-
-DT = 0.05
-R_AGENT = 0.035
-R_OBJ = 0.06
-R_CONTACT = R_AGENT + R_OBJ
-GOAL_THRESH = 0.07
-IMG = 48
-MAX_SAMPLE_TRIES = 10_000
+def reset(
+    batch: int,
+    seed: int = 0,
+) -> tuple[
+    list[float],
+    list[float],
+    list[float],
+    list[float],
+    list[float],
+    list[float],
+]:
+    """Sample ``batch`` ``(ax, ay, ox, oy, gx, gy)`` states."""
+    return _rs.pointpush_reset(seed, batch)
 
 
 def step(
-    agent: NDArray[np.float32],
-    obj: NDArray[np.float32],
-    action: NDArray[np.float32],
-) -> tuple[
-    NDArray[np.float32], NDArray[np.float32]
-]:  # agent,obj,action:(B,2) -> next agent,obj
-    if _rs is not None and agent.ndim == 2 and agent.shape[1] == 2:
-        ax = np.ascontiguousarray(agent[:, 0], dtype=np.float32)
-        ay = np.ascontiguousarray(agent[:, 1], dtype=np.float32)
-        ox = np.ascontiguousarray(obj[:, 0], dtype=np.float32)
-        oy = np.ascontiguousarray(obj[:, 1], dtype=np.float32)
-        ux = np.ascontiguousarray(action[:, 0], dtype=np.float32)
-        uy = np.ascontiguousarray(action[:, 1], dtype=np.float32)
-        _rs.pointpush_step_in_place(ax, ay, ox, oy, ux, uy)
-        return np.stack([ax, ay], axis=-1), np.stack([ox, oy], axis=-1)
-    a = np.clip(agent + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
-    d = a - obj
-    dist = np.linalg.norm(d, axis=-1, keepdims=True)
-    contact = dist < R_CONTACT
-    obj_new = np.where(
-        contact, np.clip(a - d / (dist + 1e-9) * R_CONTACT, 0.0, 1.0), obj
-    )  # shoved to far side
-    d2 = a - obj_new
-    dist2 = np.linalg.norm(d2, axis=-1, keepdims=True)
-    penetrate = contact & (
-        dist2 < R_CONTACT
-    )  # object hit a bound -> push the agent back instead
-    a = np.where(penetrate, obj_new + d2 / (dist2 + 1e-9) * R_CONTACT, a)
-    return np.clip(a, 0.0, 1.0), obj_new
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+    ux: list[float],
+    uy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Advance agent and object positions without mutating inputs."""
+    return _rs.pointpush_step(ax, ay, ox, oy, ux, uy)
 
 
-def solved(
-    obj: NDArray[np.float32], goal: NDArray[np.float32]
-) -> NDArray[np.bool_]:
-    return np.linalg.norm(obj - goal, axis=-1) < GOAL_THRESH
+def rollout(
+    horizon: int,
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+    ux: list[float],
+    uy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Run a ``horizon``-step batched rollout."""
+    return _rs.pointpush_rollout(horizon, ax, ay, ox, oy, ux, uy)
 
 
-# agent, object, goal — object/goal far enough apart to need real pushing
-def reset(
-    rng: np.random.Generator, n: int
-) -> tuple[NDArray[np.float32], NDArray[np.float32], NDArray[np.float32]]:
-    obj = rng.uniform(0.15, 0.85, (n, 2))
-    goal = rng.uniform(0.15, 0.85, (n, 2))
-    close = np.linalg.norm(obj - goal, axis=-1) < 0.35
-    for _ in range(MAX_SAMPLE_TRIES):
-        if not close.any():
-            break
-        goal[close] = rng.uniform(0.15, 0.85, (int(close.sum()), 2))
-        close = np.linalg.norm(obj - goal, axis=-1) < 0.35
-    else:
-        raise RuntimeError("pointpush.reset exceeded MAX_SAMPLE_TRIES")
-    agent = rng.uniform(0.1, 0.9, (n, 2))
-    return (
-        agent.astype(np.float32),
-        obj.astype(np.float32),
-        goal.astype(np.float32),
-    )
-
-
-# paint a disc of intensity val at pos onto (B,img,img)
-def _blob(frame, pos, r, val):
-    img = frame.shape[1]
-    yy, xx = np.meshgrid(np.arange(img), np.arange(img), indexing="ij")
-    px, py = pos[:, 0] * img, pos[:, 1] * img
-    d2 = (xx[None] - px[:, None, None]) ** 2 + (
-        yy[None] - py[:, None, None]
-    ) ** 2
-    return np.where(d2 <= (r * img) ** 2, val, frame)
-
-
-# (B,2),(B,2) -> (B,img,img,1): object (0.55) under agent (1.0)
 def render(
-    agent: NDArray[np.float32],
-    obj: NDArray[np.float32],
-    img: int = 48,
-) -> NDArray[np.float32]:
-    if (
-        _rs is not None
-        and agent.dtype == np.float32
-        and obj.dtype == np.float32
-    ):
-        return _rs.pointpush_render(
-            np.ascontiguousarray(agent[:, 0]),
-            np.ascontiguousarray(agent[:, 1]),
-            np.ascontiguousarray(obj[:, 0]),
-            np.ascontiguousarray(obj[:, 1]),
-            img,
-        )[..., None]
-    frame = np.zeros((len(agent), img, img), np.float32)
-    frame = _blob(frame, obj, R_OBJ, 0.55)
-    frame = _blob(frame, agent, R_AGENT, 1.0)
-    return frame[..., None]
-
-
-# scripted pusher (for solvability check): get behind object, push to goal
-def oracle_action(
-    agent: NDArray[np.float32],
-    obj: NDArray[np.float32],
-    goal: NDArray[np.float32],
-) -> NDArray[np.float32]:
-    to_goal = goal - obj
-    tg = to_goal / (np.linalg.norm(to_goal, axis=-1, keepdims=True) + 1e-9)
-    behind = obj - tg * (
-        R_CONTACT + 0.02
-    )  # the spot behind the object, opposite the goal
-    d_behind = behind - agent
-    db = np.linalg.norm(d_behind, axis=-1, keepdims=True)
-    aligned = (
-        db < 0.06
-    )  # close to the push spot -> push toward goal, else go to the push spot
-    return np.where(aligned, tg, d_behind / (db + 1e-9))
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+) -> list[float]:
+    """Render ``(B, 48, 48)`` flat float32 frames."""
+    return _rs.pointpush_render(ax, ay, ox, oy)

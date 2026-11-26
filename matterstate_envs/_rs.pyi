@@ -1,232 +1,187 @@
-"""Type stubs for the compiled Rust extension module matterstate_envs._rs."""
-
-from __future__ import annotations
-
-import numpy as np
-from numpy.typing import NDArray
+"""Type stubs for the zero-dependency Rust extension matterstate_envs._rs."""
 
 IMG: int
 
-def sokoban_step(
-    grid: NDArray[np.int8],
-    action: int,
-) -> NDArray[np.int8]: ...
+def sokoban_step(grid: list[int], action: int) -> list[int]: ...
+def sokoban_solved(grid: list[int]) -> bool: ...
 def pointmaze_reset(
     seed: int,
     batch: int,
-) -> tuple[
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-]: ...
-def pointmaze_step_in_place(
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-) -> None: ...
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
+def pointmaze_in_wall(x: list[float], y: list[float]) -> list[bool]: ...
+def pointmaze_step(
+    x: list[float],
+    y: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> tuple[list[float], list[float]]: ...
 def pointmaze_rollout(
     horizon: int,
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]: ...
-def pointmaze_proc_step_in_place(
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-    walls: NDArray[np.bool_],
-) -> None: ...
+    x: list[float],
+    y: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> tuple[list[float], list[float]]: ...
+def pointmaze_proc_step(
+    x: list[float],
+    y: list[float],
+    ax: list[float],
+    ay: list[float],
+    walls: list[bool],
+) -> tuple[list[float], list[float]]: ...
 def pointmaze_proc_render(
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    walls: NDArray[np.bool_],
+    x: list[float],
+    y: list[float],
+    walls: list[bool],
     r_px: float,
-) -> NDArray[np.float32]: ...
+) -> list[float]: ...
 def pointpush_reset(
     seed: int,
     batch: int,
 ) -> tuple[
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
+    list[float],
+    list[float],
+    list[float],
+    list[float],
+    list[float],
+    list[float],
 ]: ...
-def pointpush_step_in_place(
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    ux: NDArray[np.float32],
-    uy: NDArray[np.float32],
-) -> None: ...
+def pointpush_step(
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+    ux: list[float],
+    uy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
 def pointpush_rollout(
     horizon: int,
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    ux: NDArray[np.float32],
-    uy: NDArray[np.float32],
-) -> tuple[
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-]: ...
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+    ux: list[float],
+    uy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
 def pointpush_render(
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    gx: NDArray[np.float32],
-    gy: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
+    ax: list[float],
+    ay: list[float],
+    ox: list[float],
+    oy: list[float],
+) -> list[float]: ...
 def reacher_reset(
     seed: int,
     batch: int,
-) -> tuple[
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-]: ...
-def reacher_step_in_place(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-) -> None: ...
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
+def reacher_step(
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float]]: ...
 def reacher_rollout(
     horizon: int,
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]: ...
-def reacher_render(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    gx: NDArray[np.float32],
-    gy: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
-def reacher_obs_step_in_place(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    or_: NDArray[np.float32],
-) -> None: ...
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float]]: ...
+def reacher_render(t1: list[float], t2: list[float]) -> list[float]: ...
+def reacher_morph_render(
+    t1: list[float],
+    t2: list[float],
+    l1: list[float],
+    l2: list[float],
+) -> list[float]: ...
+def reacher_obs_step(
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+    ox: list[float],
+    oy: list[float],
+    or_: list[float],
+) -> tuple[list[float], list[float]]: ...
 def reacher_obs_rollout(
     horizon: int,
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    or_: NDArray[np.float32],
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]: ...
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+    ox: list[float],
+    oy: list[float],
+    or_: list[float],
+) -> tuple[list[float], list[float]]: ...
 def reacher_obs_render(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    gx: NDArray[np.float32],
-    gy: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    or_: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
-def reacher_morph_render(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    l1: NDArray[np.float32],
-    l2: NDArray[np.float32],
-    gx: NDArray[np.float32],
-    gy: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
-def armpush_step_in_place(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-) -> None: ...
+    t1: list[float],
+    t2: list[float],
+    ox: list[float],
+    oy: list[float],
+    or_: list[float],
+) -> list[float]: ...
+def armpush_step(
+    t1: list[float],
+    t2: list[float],
+    ox: list[float],
+    oy: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
 def armpush_rollout(
     horizon: int,
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    a1: NDArray[np.float32],
-    a2: NDArray[np.float32],
-) -> tuple[
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-    NDArray[np.float32],
-]: ...
+    t1: list[float],
+    t2: list[float],
+    ox: list[float],
+    oy: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
 def armpush_render(
-    t1: NDArray[np.float32],
-    t2: NDArray[np.float32],
-    ox: NDArray[np.float32],
-    oy: NDArray[np.float32],
-    gx: NDArray[np.float32],
-    gy: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
-def pusht_reset(seed: int, batch: int) -> NDArray[np.float32]: ...
-def pusht_coverage(states: NDArray[np.float32]) -> NDArray[np.float32]: ...
+    t1: list[float],
+    t2: list[float],
+    ox: list[float],
+    oy: list[float],
+) -> list[float]: ...
+def pusht_reset(seed: int, batch: int) -> list[float]: ...
+def pusht_coverage(states: list[float]) -> list[float]: ...
 def pusht_step(
-    state: NDArray[np.float32],
+    state: list[float],
     action_x: float,
     action_y: float,
-) -> float: ...
+) -> tuple[list[float], float]: ...
 def pusht_step_batch(
-    states: NDArray[np.float32],
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
+    states: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> tuple[list[float], list[float]]: ...
 def pusht_rollout(
     horizon: int,
-    states: NDArray[np.float32],
-    ax: NDArray[np.float32],
-    ay: NDArray[np.float32],
-) -> NDArray[np.float32]: ...
-def pusht_render_rgb(
-    state: NDArray[np.float32],
-    size: int,
-) -> NDArray[np.uint8]: ...
-def pusht_render_rgb_batch(
-    states: NDArray[np.float32],
-    size: int,
-) -> NDArray[np.uint8]: ...
-def ogbench_maze_step_in_place(
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    vx: NDArray[np.float32],
-    vy: NDArray[np.float32],
-    fx: NDArray[np.float32],
-    fy: NDArray[np.float32],
-) -> None: ...
-def ogbench_maze_large_step_in_place(
-    x: NDArray[np.float32],
-    y: NDArray[np.float32],
-    vx: NDArray[np.float32],
-    vy: NDArray[np.float32],
-    fx: NDArray[np.float32],
-    fy: NDArray[np.float32],
-) -> None: ...
+    states: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> list[float]: ...
+def pusht_render_rgb(state: list[float], size: int) -> list[int]: ...
+def pusht_render_rgb_batch(states: list[float], size: int) -> list[int]: ...
+def ogbench_maze_step_medium(
+    x: list[float],
+    y: list[float],
+    vx: list[float],
+    vy: list[float],
+    fx: list[float],
+    fy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
+def ogbench_maze_step_large(
+    x: list[float],
+    y: list[float],
+    vx: list[float],
+    vy: list[float],
+    fx: list[float],
+    fy: list[float],
+) -> tuple[list[float], list[float], list[float], list[float]]: ...
 def sudoku_generate(
     n: int,
     num: int,
     clue_frac: float,
     seed: int = 0,
     unique_only: bool = False,
-) -> tuple[NDArray[np.int8], NDArray[np.int8]]: ...
+) -> tuple[list[int], list[int]]: ...

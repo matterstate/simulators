@@ -1,97 +1,37 @@
-"""PointMaze — a 2D continuous goal-conditioned navigation task
-(DINO-WM-style), CEM-MPC's home turf.
+"""2D PointMaze backed by the Rust AVX2+FMA core."""
 
-A point agent moves in the unit square under velocity-control actions,
-around walls, toward a goal position.
-Unlike Sokoban (discrete, irreversible, combinatorial → flat goal-distance
-landscape that breaks CEM), this is
-continuous with a SMOOTH distance-to-goal — exactly where JEPA world-model +
-CEM-MPC planning is proven to work
-(V-JEPA 2-AC, DINO-WM beat Dreamer/TD-MPC2). We use it to validate the
-proper JEPA recipe end-to-end.
-
-Vectorized numpy: step/solved/in_wall act on (B,2) batches so CEM can roll a
-whole population at once.
-"""
-
-import numpy as np
-from numpy.typing import NDArray
-
-try:
-    from matterstate_envs import _rs
-except ImportError:
-    _rs = None
-
-# one central wall rising from the floor with a gap at the top → straight line
-# is often blocked, must route over.
-WALLS = np.array(
-    [
-        [0.45, 0.00, 0.55, 0.62],  # vertical wall, gap above y=0.62
-    ]
-)
-DT = 0.06
-GOAL_THRESH = 0.06
-MAX_SAMPLE_TRIES = 10_000
+from matterstate_envs import _rs
 
 
-def in_wall(
-    pos: NDArray[np.float32],
-) -> NDArray[np.bool_]:  # pos:(...,2) -> bool(...)
-    x, y = pos[..., 0], pos[..., 1]
-    inside = np.zeros(pos.shape[:-1], dtype=bool)
-    for x0, y0, x1, y1 in WALLS:
-        inside |= (x >= x0) & (x <= x1) & (y >= y0) & (y <= y1)
-    return inside
-
-
-# pos:(B,2), action:(B,2) in [-1,1] -> next pos:(B,2); blocked moves stay put
-def step(
-    pos: NDArray[np.float32],
-    action: NDArray[np.float32],
-) -> NDArray[np.float32]:
-    if _rs is not None and pos.ndim == 2 and pos.shape[1] == 2:
-        x = np.ascontiguousarray(pos[:, 0], dtype=np.float32)
-        y = np.ascontiguousarray(pos[:, 1], dtype=np.float32)
-        ax = np.ascontiguousarray(action[:, 0], dtype=np.float32)
-        ay = np.ascontiguousarray(action[:, 1], dtype=np.float32)
-        _rs.pointmaze_step_in_place(x, y, ax, ay)
-        return np.stack([x, y], axis=-1)
-    nxt = np.clip(pos + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
-    blocked = in_wall(nxt)
-    return np.where(blocked[..., None], pos, nxt)
-
-
-def solved(
-    pos: NDArray[np.float32], goal: NDArray[np.float32]
-) -> NDArray[np.bool_]:  # (B,2),(B,2) -> bool(B)
-    return np.linalg.norm(pos - goal, axis=-1) < GOAL_THRESH
-
-
-def sample_free(
-    rng: np.random.Generator, n: int
-) -> NDArray[np.float32]:  # uniform points not inside any wall
-    pts = rng.uniform(0, 1, (n, 2))
-    bad = in_wall(pts)
-    for _ in range(MAX_SAMPLE_TRIES):
-        if not bad.any():
-            return pts
-        pts[bad] = rng.uniform(0, 1, (int(bad.sum()), 2))
-        bad = in_wall(pts)
-    raise RuntimeError("pointmaze.sample_free exceeded MAX_SAMPLE_TRIES")
-
-
-# (start, goal) both in free space, and far enough apart to need real
-# navigation
 def reset(
-    rng: np.random.Generator,
-    n: int,
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
-    start = sample_free(rng, n)
-    goal = sample_free(rng, n)
-    close = np.linalg.norm(start - goal, axis=-1) < 0.4
-    for _ in range(MAX_SAMPLE_TRIES):
-        if not close.any():
-            return start, goal
-        goal[close] = sample_free(rng, int(close.sum()))
-        close = np.linalg.norm(start - goal, axis=-1) < 0.4
-    raise RuntimeError("pointmaze.reset exceeded MAX_SAMPLE_TRIES")
+    batch: int,
+    seed: int = 0,
+) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Sample ``batch`` valid ``(x, y, gx, gy)`` states."""
+    return _rs.pointmaze_reset(seed, batch)
+
+
+def in_wall(x: list[float], y: list[float]) -> list[bool]:
+    """Return wall-membership booleans for ``(x, y)`` coordinates."""
+    return _rs.pointmaze_in_wall(x, y)
+
+
+def step(
+    x: list[float],
+    y: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> tuple[list[float], list[float]]:
+    """Advance ``(x, y)`` by ``(ax, ay)`` without mutating inputs."""
+    return _rs.pointmaze_step(x, y, ax, ay)
+
+
+def rollout(
+    horizon: int,
+    x: list[float],
+    y: list[float],
+    ax: list[float],
+    ay: list[float],
+) -> tuple[list[float], list[float]]:
+    """Run a ``horizon``-step batched rollout."""
+    return _rs.pointmaze_rollout(horizon, x, y, ax, ay)

@@ -311,15 +311,12 @@ wheels = [
 name = "matterstate-envs"
 version = "0.1.0"
 source = { editable = "." }
-dependencies = [
-    { name = "numpy" },
-]
 
 [package.dev-dependencies]
 dev = [
     { name = "hegeltest" },
+    { name = "numpy" },
     { name = "pytest" },
-    { name = "syrupy" },
 ]
 reference = [
     { name = "gym-pusht" },
@@ -330,13 +327,12 @@ reference = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "numpy", specifier = ">=2.0,<3" }]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "hegeltest", specifier = ">=0.5" },
+    { name = "numpy", specifier = ">=2.0,<3" },
     { name = "pytest", specifier = ">=8" },
-    { name = "syrupy", specifier = ">=4" },
 ]
 reference = [
     { name = "gym-pusht", specifier = ">=0.1" },
@@ -624,18 +620,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/1c/58/ac8f7de528c125ab41a001523ada72e95e2d5f746917487e723b25e1c5c4/shapely-2.2.0-cp313-cp313-win32.whl", hash = "sha256:40871d7135cd723f965d200181aa28418e9ec029fd85bdd010488259d1c01906", size = 1616372, upload-time = "2026-10-07T09:16:43.094Z" },
     { url = "https://files.pythonhosted.org/packages/25/ed/7fcd625c9796e61d815ca9545d4e44a16f075f83869c1532206de88f23f1/shapely-2.2.0-cp313-cp313-win_amd64.whl", hash = "sha256:1eaa2cb64cdedaf65d6bc86f2819c9cd7d6d68f969aa3ebfdc93743ab581f437", size = 1790191, upload-time = "2026-10-07T09:16:44.852Z" },
     { url = "https://files.pythonhosted.org/packages/23/c9/947fcd5665e1945dd54f6e8890bc6dd04613dd169a5fbb4ba7497754b3a8/shapely-2.2.0-cp313-cp313-win_arm64.whl", hash = "sha256:f79b3b34ad2d067207f21f821489c720b14ce40f3bfda931987a193165f80133", size = 1878351, upload-time = "2026-10-07T09:16:46.656Z" },
-]
-
-[[package]]
-name = "syrupy"
-version = "7.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/99/01/37beb5207de6b94d65feadb611b8b52c535d5de3f090e6775c0da5324072/syrupy-7.0.3.tar.gz", hash = "sha256:91f8b02111c3094a9a6a7eb80b6807f35a298f9d3c3d3cbf27d4e2c4c3ff8b1e", size = 123374, upload-time = "2026-11-21T16:07:03.001Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/e0/83f27009f6c99a6b61d99c2d311cab080f43917bdad5d0bf974edf754b70/syrupy-7.0.3-py3-none-any.whl", hash = "sha256:020b4688b46887accb7365fdef7983e6a157f1e6984d1e00571d3d40cfebce51", size = 69112, upload-time = "2026-11-21T16:07:01.582Z" },
 ]
 
 [[package]]

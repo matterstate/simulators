@@ -1,137 +1,115 @@
-"""Tests for the PyO3 `matterstate_envs_rs` extension module."""
+"""Tests for the zero-dependency PyO3 Python bindings across all 11 envs."""
 
-import numpy as np
+import math
 
-from matterstate_envs import _rs as matterstate_envs_rs
-from matterstate_envs import pointmaze, reacher, sokoban
-
-
-def test_pyo3_sokoban_step() -> None:
-    grid = np.full((10, 10), sokoban.FLOOR, np.int8)
-    grid[[0, -1], :] = sokoban.WALL
-    grid[:, [0, -1]] = sokoban.WALL
-    grid[4, 3:6] = [sokoban.PLR, sokoban.BOX, sokoban.TARGET]
-    flat = grid.ravel()
-    expected = sokoban.step(flat, 3)
-    actual = matterstate_envs_rs.sokoban_step(flat, 3)
-    np.testing.assert_array_equal(actual, expected)
-
-
-def test_pyo3_pointmaze_reset_and_rollout() -> None:
-    batch = 32
-    horizon = 16
-    x, y, gx, gy = matterstate_envs_rs.pointmaze_reset(42, batch)
-    start = np.stack([x, y], -1)
-    goal = np.stack([gx, gy], -1)
-    assert not pointmaze.in_wall(start).any()
-    assert (np.linalg.norm(start - goal, axis=-1) >= 0.4 - 1e-6).all()
-
-    rng = np.random.default_rng(7)
-    actions = rng.uniform(-1.0, 1.0, (horizon, batch, 2)).astype(np.float32)
-    ax = np.ascontiguousarray(actions[:, :, 0]).ravel()
-    ay = np.ascontiguousarray(actions[:, :, 1]).ravel()
-    tx, ty = matterstate_envs_rs.pointmaze_rollout(horizon, x, y, ax, ay)
-
-    pos = start.copy()
-    exp = []
-    for t in range(horizon):
-        pos = pointmaze.step(pos, actions[t])
-        exp.append(pos)
-    np.testing.assert_allclose(np.stack([tx, ty], -1), np.stack(exp), atol=1e-5)
+from matterstate_envs import (
+    armpush,
+    ogbench_maze,
+    pointmaze,
+    pointmaze_proc,
+    pointpush,
+    pusht,
+    reacher,
+    reacher_morph,
+    reacher_obs,
+    sokoban,
+    sudoku,
+)
 
 
-def test_pyo3_reacher_render() -> None:
-    rng = np.random.default_rng(11)
-    theta, _ = reacher.reset(rng, 16)
-    t1 = np.ascontiguousarray(theta[:, 0])
-    t2 = np.ascontiguousarray(theta[:, 1])
-    frames = matterstate_envs_rs.reacher_render(t1, t2, 48)
-    np.testing.assert_array_equal(frames[..., None], reacher.render(theta))
+def test_pointmaze_and_unchanged_inputs() -> None:
+    x, y, gx, gy = pointmaze.reset(8, seed=42)
+    assert len(x) == len(y) == len(gx) == len(gy) == 8
+    x_orig, y_orig = list(x), list(y)
+    ax, ay = [0.5] * 8, [-0.5] * 8
+    nx, ny = pointmaze.step(x, y, ax, ay)
+    assert x == x_orig and y == y_orig
+    assert len(nx) == len(ny) == 8
+    assert not any(pointmaze.in_wall(nx, ny))
+
+    tx, ty = pointmaze.rollout(4, x, y, [0.1] * 32, [0.1] * 32)
+    assert len(tx) == len(ty) == 32
 
 
-def test_pyo3_pusht_rgb_and_ogbench_maze() -> None:
-    state = np.array([290.0, 190.0, 0.0, 0.0, 256.0, 301.0, 0.0], np.float32)
-    cov = matterstate_envs_rs.pusht_step(state, 290.0, 320.0)
-    assert 0.0 <= cov <= 1.0
-    rgb = matterstate_envs_rs.pusht_render_rgb(state, 96)
-    assert rgb.shape == (96, 96, 3)
-    assert rgb.dtype == np.uint8
-
-    x = np.array([6.0], np.float32)
-    y = np.array([6.0], np.float32)
-    vx = np.array([0.0], np.float32)
-    vy = np.array([0.0], np.float32)
-    fx = np.array([1.0], np.float32)
-    fy = np.array([0.0], np.float32)
-    matterstate_envs_rs.ogbench_maze_step_in_place(x, y, vx, vy, fx, fy)
-    assert x[0] > 6.0
-
-    states = np.tile(state, (4, 1))
-    covs = matterstate_envs_rs.pusht_step_batch(
-        states, np.full(4, 290.0, np.float32), np.full(4, 320.0, np.float32)
+def test_pointmaze_proc_and_pointpush() -> None:
+    walls = [False] * (2 * 36)
+    nx, ny = pointmaze_proc.step(
+        [0.5, 0.5], [0.5, 0.5], [0.5, 0.0], [0.0, 0.5], walls
     )
-    assert covs.shape == (4,)
-    rgbs = matterstate_envs_rs.pusht_render_rgb_batch(states, 96)
-    assert rgbs.shape == (4, 96, 96, 3)
+    assert len(nx) == len(ny) == 2
+    frames = pointmaze_proc.render(nx, ny, walls)
+    assert len(frames) == 2 * 48 * 48
 
-    matterstate_envs_rs.ogbench_maze_large_step_in_place(x, y, vx, vy, fx, fy)
-    assert x[0] > 6.0
-
-
-def test_pyo3_pusht_reset_coverage_rollout_and_sudoku() -> None:
-    states = matterstate_envs_rs.pusht_reset(42, 8)
-    assert states.shape == (8, 7)
-    covs = matterstate_envs_rs.pusht_coverage(states)
-    assert covs.shape == (8,)
-    assert ((covs >= 0.0) & (covs <= 1.0)).all()
-
-    ax = np.full(5 * 8, 256.0, np.float32)
-    ay = np.full(5 * 8, 256.0, np.float32)
-    traj = matterstate_envs_rs.pusht_rollout(5, states, ax, ay)
-    assert traj.shape == (5, 8, 7)
-
-    puz, sol = matterstate_envs_rs.sudoku_generate(4, 6, 0.5, 42, True)
-    assert puz.shape == (6, 16)
-    assert sol.shape == (6, 16)
-    assert puz.dtype == np.int8
-    assert sol.dtype == np.int8
-    assert ((sol >= 1) & (sol <= 4)).all()
+    ax, ay, ox, oy, gx, gy = pointpush.reset(4, seed=7)
+    assert len(gx) == len(gy) == 4
+    nax, nay, nox, noy = pointpush.step(ax, ay, ox, oy, [0.2] * 4, [0.1] * 4)
+    assert len(nax) == len(nay) == len(nox) == len(noy) == 4
+    pframes = pointpush.render(nax, nay, nox, noy)
+    assert len(pframes) == 4 * 48 * 48
 
 
-def test_public_rust_wrappers() -> None:
-    from matterstate_envs import ogbench_maze, pusht, sudoku
+def test_reacher_family_and_armpush() -> None:
+    t1, t2, gx, gy = reacher.reset(4, seed=3)
+    assert len(gx) == len(gy) == 4
+    nt1, nt2 = reacher.step(t1, t2, [0.3] * 4, [-0.3] * 4)
+    assert all(abs(v) <= math.pi + 1e-5 for v in nt1 + nt2)
+    assert len(reacher.render(nt1, nt2)) == 4 * 48 * 48
+
+    assert (
+        len(reacher_morph.render(nt1, nt2, [0.25] * 4, [0.2] * 4))
+        == 4 * 48 * 48
+    )
+
+    ot1, ot2 = reacher_obs.step(
+        nt1, nt2, [0.1] * 4, [0.1] * 4, [0.8] * 4, [0.8] * 4, [0.05] * 4
+    )
+    assert len(ot1) == len(ot2) == 4
+    assert (
+        len(reacher_obs.render(ot1, ot2, [0.8] * 4, [0.8] * 4, [0.05] * 4))
+        == 4 * 48 * 48
+    )
+
+    at1, at2, aox, aoy = armpush.step(
+        nt1, nt2, [0.6] * 4, [0.6] * 4, [0.1] * 4, [0.1] * 4
+    )
+    assert len(at1) == len(at2) == len(aox) == len(aoy) == 4
+    assert len(armpush.render(at1, at2, aox, aoy)) == 4 * 48 * 48
+
+
+def test_sokoban_pusht_ogbench_and_sudoku() -> None:
+    board = [sokoban.FLOOR] * 100
+    for i in range(10):
+        board[i] = sokoban.WALL
+        board[90 + i] = sokoban.WALL
+        board[i * 10] = sokoban.WALL
+        board[i * 10 + 9] = sokoban.WALL
+    board[55] = sokoban.PLR
+    nxt = sokoban.step(board, 0)
+    assert nxt[45] == sokoban.PLR
+    assert sokoban.solved(nxt)
 
     states = pusht.reset(4, seed=7)
-    assert states.shape == (4, 7)
+    assert len(states) == 4 * 7
     covs = pusht.coverage(states)
-    assert covs.shape == (4,)
+    assert len(covs) == 4 and all(0.0 <= c <= 1.0 for c in covs)
+    s0_next, c0 = pusht.step(states[:7], 256.0, 256.0)
+    assert len(s0_next) == 7 and 0.0 <= c0 <= 1.0
+    assert len(pusht.render_rgb(s0_next)) == 96 * 96 * 3
+    next_batch, bcov = pusht.step_batch(states, [256.0] * 4, [256.0] * 4)
+    assert len(next_batch) == 4 * 7 and len(bcov) == 4
+    assert len(pusht.render_rgb_batch(next_batch, size=64)) == 4 * 64 * 64 * 3
+    traj = pusht.rollout(3, states, [256.0] * 12, [256.0] * 12)
+    assert len(traj) == 3 * 4 * 7
 
-    s0 = states[0].copy()
-    c0 = pusht.step(s0, 256.0, 256.0)
-    assert 0.0 <= c0 <= 1.0
-    rgb0 = pusht.render_rgb(s0)
-    assert rgb0.shape == (96, 96, 3)
-
-    tx = np.full(4, 256.0, np.float32)
-    ty = np.full(4, 256.0, np.float32)
-    batch_cov = pusht.step_batch(states, tx, ty)
-    assert batch_cov.shape == (4,)
-    rgbs = pusht.render_rgb_batch(states, size=64)
-    assert rgbs.shape == (4, 64, 64, 3)
-
-    traj = pusht.rollout(3, states, np.tile(tx, 3), np.tile(ty, 3))
-    assert traj.shape == (3, 4, 7)
-
-    x = np.array([6.0], np.float32)
-    y = np.array([6.0], np.float32)
-    vx = np.zeros(1, np.float32)
-    vy = np.zeros(1, np.float32)
-    fx = np.array([1.0], np.float32)
-    fy = np.zeros(1, np.float32)
-    ogbench_maze.step_medium_in_place(x, y, vx, vy, fx, fy)
-    ogbench_maze.step_large_in_place(x, y, vx, vy, fx, fy)
-    assert x[0] > 6.0
+    mx, my, mvx, mvy = ogbench_maze.step_medium(
+        [6.0], [6.0], [0.0], [0.0], [1.0], [0.0]
+    )
+    assert mx[0] > 6.0 and len(my) == len(mvx) == len(mvy) == 1
+    lx, _, _, _ = ogbench_maze.step_large(
+        [6.0], [6.0], [0.0], [0.0], [1.0], [0.0]
+    )
+    assert lx[0] > 6.0
 
     puz, sol = sudoku.generate(4, 2, 0.5, seed=7, unique_only=True)
-    assert puz.shape == (2, 16)
-    assert sol.shape == (2, 16)
+    assert len(puz) == len(sol) == 2 * 16
+    assert all(1 <= v <= 4 for v in sol)

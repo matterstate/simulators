@@ -14,6 +14,12 @@ snapshots:
       style: primary
       start: 0
       end: 41
+  from scipy import stats:
+    labels:
+    - source: from scipy import stats
+      style: primary
+      start: 0
+      end: 23
   from train.explog import log_result:
     labels:
     - source: from train.explog import log_result
@@ -23,6 +29,12 @@ snapshots:
   import gym_pusht:
     labels:
     - source: import gym_pusht
+      style: primary
+      start: 0
+      end: 16
+  import gymnasium:
+    labels:
+    - source: import gymnasium
       style: primary
       start: 0
       end: 16
@@ -38,9 +50,21 @@ snapshots:
       style: primary
       start: 0
       end: 10
+  import numpy as np:
+    labels:
+    - source: import numpy as np
+      style: primary
+      start: 0
+      end: 18
   import scipy:
     labels:
     - source: import scipy
+      style: primary
+      start: 0
+      end: 12
+  import torch:
+    labels:
+    - source: import torch
       style: primary
       start: 0
       end: 12

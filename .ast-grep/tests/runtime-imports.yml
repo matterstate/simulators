@@ -1,15 +1,9 @@
 id: runtime-imports
 valid:
-  - import numpy as np
-  - from matterstate_envs import reacher
-  - value = "import gymnasium"
+  - from matterstate_envs import _rs
+  - from matterstate_envs import pointmaze
 invalid:
-  - import gymnasium as gym
-  - import gym_pusht
-  - import jax
-  - import scipy
-  - from ogbench import make_env_and_datasets
-  - from train.explog import log_result
-  - |
-    def step():
-        import torch
+  - import numpy as np
+  - import torch
+  - import gymnasium
+  - from scipy import stats

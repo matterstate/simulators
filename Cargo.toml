@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/matterstate/simulators"
-description = "Fast native Rust simulator kernels with Python/NumPy bindings"
+description = "Fast native Rust simulator kernels with zero-dependency Python bindings"
 keywords = ["rl", "simulator", "simd", "sokoban", "pusht"]
 
 [lib]
@@ -15,10 +15,9 @@ crate-type = ["rlib", "cdylib"]
 
 [features]
 default = []
-python = ["dep:pyo3", "dep:numpy"]
+python = ["dep:pyo3"]
 
 [dependencies]
-numpy = { version = "0.24", optional = true }
 pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 
 [dev-dependencies]

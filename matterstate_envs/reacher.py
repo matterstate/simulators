@@ -1,157 +1,39 @@
-"""Reacher — a planar 2-link arm whose END-EFFECTOR must reach a goal,
-controlled by JOINT velocities.
+"""2-link planar Reacher backed by the Rust core."""
 
-The north-star step from point-mass nav/push to real robot control: the
-agent commands the two JOINTS (theta1, theta2),
-not the end-effector directly, so reaching a goal requires inverting the
-kinematic chain through the world model. There
-is kinematic redundancy (many joint configs reach the same point) and the
-action->effect map is nonlinear (a joint
-nudge moves the tip by an amount that depends on the whole arm pose) — the
-defining features of articulated control.
-Goal is on the END-EFFECTOR position (like PointPush's goal-on-object):
-decode the tip from the latent, plan joint
-actions to bring it to the goal.
+from matterstate_envs import _rs
 
-Pure vectorized numpy; render draws the two links + tip + goal so a conv
-encoder can read the arm pose from pixels.
-"""
-
-import numpy as np
-from numpy.typing import NDArray
-
-try:
-    from matterstate_envs import _rs
-except ImportError:
-    _rs = None
-
-L1, L2 = (
-    0.22,
-    0.2,
-    # link lengths (image-normalized); reach annulus = [|L1-L2|, L1+L2] = [0.02,
-    # 0.42]
-)
-BASE = np.array([0.5, 0.5], np.float32)  # shoulder at image center
-STEP = 0.15  # rad per unit action per env step
-GOAL_THRESH = 0.05
-IMG = 48
-LINK_W = 0.018  # render half-thickness of a link
-MAX_SAMPLE_TRIES = 10_000
+IMG: int = _rs.IMG
 
 
-def fk(
-    theta: NDArray[np.float32],
-) -> tuple[
-    NDArray[np.float32], NDArray[np.float32]
-]:  # theta:(B,2) -> elbow:(B,2), tip:(B,2)  forward kinematics
-    t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
-    elbow = BASE + L1 * np.stack([np.cos(t1), np.sin(t1)], -1)
-    tip = elbow + L2 * np.stack([np.cos(t12), np.sin(t12)], -1)
-    return elbow.astype(np.float32), tip.astype(np.float32)
-
-
-def tip(theta: NDArray[np.float32]) -> NDArray[np.float32]:
-    return fk(theta)[1]
-
-
-# theta,action:(B,2) -> next theta (joint-velocity control, angles wrap to
-# [-pi,pi])
-def step(
-    theta: NDArray[np.float32],
-    action: NDArray[np.float32],
-) -> NDArray[np.float32]:
-    if _rs is not None and theta.ndim == 2 and theta.shape[1] == 2:
-        t1 = np.ascontiguousarray(theta[:, 0], dtype=np.float32)
-        t2 = np.ascontiguousarray(theta[:, 1], dtype=np.float32)
-        a1 = np.ascontiguousarray(action[:, 0], dtype=np.float32)
-        a2 = np.ascontiguousarray(action[:, 1], dtype=np.float32)
-        _rs.reacher_step_in_place(t1, t2, a1, a2)
-        return np.stack([t1, t2], axis=-1)
-    th = theta + np.clip(action, -1.0, 1.0) * STEP
-    return ((th + np.pi) % (2 * np.pi) - np.pi).astype(np.float32)
-
-
-def solved(
-    theta: NDArray[np.float32], goal: NDArray[np.float32]
-) -> NDArray[np.bool_]:
-    return np.linalg.norm(tip(theta) - goal, axis=-1) < GOAL_THRESH
-
-
-# theta, goal — goal a reachable point, start tip far enough to need real
-# motion
 def reset(
-    rng: np.random.Generator,
-    n: int,
-) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
-    theta = rng.uniform(-np.pi, np.pi, (n, 2)).astype(np.float32)
-    ang = rng.uniform(-np.pi, np.pi, n)
-    r = rng.uniform(abs(L1 - L2) + 0.06, L1 + L2 - 0.04, n)
-    goal = (
-        BASE + np.stack([np.cos(ang), np.sin(ang)], -1) * r[:, None]
-    ).astype(np.float32)
-    far = np.linalg.norm(tip(theta) - goal, axis=-1) > 0.2
-    for _ in range(MAX_SAMPLE_TRIES):
-        if far.all():
-            return theta, goal
-        k = int((~far).sum())
-        theta[~far] = rng.uniform(-np.pi, np.pi, (k, 2))
-        far = np.linalg.norm(tip(theta) - goal, axis=-1) > 0.2
-    raise RuntimeError("reacher.reset exceeded MAX_SAMPLE_TRIES")
+    batch: int,
+    seed: int = 0,
+) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Sample ``batch`` ``(t1, t2, gx, gy)`` states."""
+    return _rs.reacher_reset(seed, batch)
 
 
-# paint pixels within w of the segment p0->p1 onto (B,img,img)
-def _seg(frame, p0, p1, w, val):
-    img = frame.shape[1]
-    yy, xx = np.meshgrid(np.arange(img), np.arange(img), indexing="ij")
-    P = np.stack([xx, yy], -1)[None] / img  # (1,img,img,2) in [0,1]
-    seg = (p1 - p0)[:, None, None, :]
-    t = ((P - p0[:, None, None, :]) * seg).sum(-1) / ((seg**2).sum(-1) + 1e-9)
-    t = np.clip(t, 0.0, 1.0)[..., None]
-    closest = p0[:, None, None, :] + t * seg
-    d2 = ((P - closest) ** 2).sum(-1)
-    return np.where(d2 <= w**2, val, frame)
+def step(
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float]]:
+    """Advance joint angles ``(t1, t2)`` without mutating inputs."""
+    return _rs.reacher_step(t1, t2, a1, a2)
 
 
-def _blob(frame, pos, r, val):
-    img = frame.shape[1]
-    yy, xx = np.meshgrid(np.arange(img), np.arange(img), indexing="ij")
-    px, py = pos[:, 0] * img, pos[:, 1] * img
-    d2 = (xx[None] - px[:, None, None]) ** 2 + (
-        yy[None] - py[:, None, None]
-    ) ** 2
-    radius = np.asarray(r)
-    if radius.ndim == 1:
-        radius = radius[:, None, None]
-    return np.where(d2 <= (radius * img) ** 2, val, frame)
+def rollout(
+    horizon: int,
+    t1: list[float],
+    t2: list[float],
+    a1: list[float],
+    a2: list[float],
+) -> tuple[list[float], list[float]]:
+    """Run a ``horizon``-step batched rollout."""
+    return _rs.reacher_rollout(horizon, t1, t2, a1, a2)
 
 
-# (B,2) -> (B,img,img,1): upper arm (0.5), forearm (0.8), tip (1.0)
-def render(theta: NDArray[np.float32], img: int = 48) -> NDArray[np.float32]:
-    if _rs is not None and theta.dtype == np.float32:
-        t1 = np.ascontiguousarray(theta[:, 0])
-        t2 = np.ascontiguousarray(theta[:, 1])
-        return _rs.reacher_render(t1, t2, img)[..., None]
-    elbow, ee = fk(theta)
-    b = np.broadcast_to(BASE, elbow.shape)
-    frame = np.zeros((len(theta), img, img), np.float32)
-    frame = _seg(frame, b, elbow, LINK_W, 0.5)
-    frame = _seg(frame, elbow, ee, LINK_W, 0.8)
-    frame = _blob(frame, ee, 0.03, 1.0)
-    return frame[..., None]
-
-
-# Jacobian-transpose descent on ||tip - goal||^2 (solvability check)
-def oracle_action(
-    theta: NDArray[np.float32], goal: NDArray[np.float32]
-) -> NDArray[np.float32]:
-    t1, t12 = theta[:, 0], theta[:, 0] + theta[:, 1]
-    s1, c1 = np.sin(t1), np.cos(t1)
-    s12, c12 = np.sin(t12), np.cos(t12)
-    err = tip(theta) - goal  # (B,2)
-    # columns of J^T applied to err: g_i = (d tip / d theta_i) . err
-    g1 = (-L1 * s1 - L2 * s12) * err[:, 0] + (L1 * c1 + L2 * c12) * err[:, 1]
-    g2 = (-L2 * s12) * err[:, 0] + (L2 * c12) * err[:, 1]
-    g = np.stack([g1, g2], -1)
-    return (-g / (np.linalg.norm(g, axis=-1, keepdims=True) + 1e-9)).astype(
-        np.float32
-    )
+def render(t1: list[float], t2: list[float]) -> list[float]:
+    """Render ``(B, 48, 48)`` flat float32 frames."""
+    return _rs.reacher_render(t1, t2)

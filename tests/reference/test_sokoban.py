@@ -44,7 +44,8 @@ def check_trajectory(grid: np.ndarray, actions: np.ndarray) -> None:
         )
         for action in actions:
             original = grid.copy()
-            expected = simulator.step(grid, int(action))
+            expected_list = simulator.step(grid.tolist(), int(action))
+            expected = np.asarray(expected_list, dtype=np.int8)
             # The external engine's public step includes pushing and walking;
             # actions 1..4 correspond to our 0..3. No renderer is substituted.
             _, _, done, _ = reference.step(
@@ -54,7 +55,7 @@ def check_trajectory(grid: np.ndarray, actions: np.ndarray) -> None:
                 canonical_state(reference), expected, strict=True
             )
             np.testing.assert_array_equal(grid, original, strict=True)
-            assert bool(done) == simulator.solved(expected)
+            assert bool(done) == simulator.solved(expected_list)
             grid = expected
             if done:
                 break

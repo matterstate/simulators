@@ -1,11 +1,11 @@
 [project]
 name = "matterstate-envs"
 version = "0.1.0"
-description = "Fast Rust simulator kernels with Python/NumPy bindings"
+description = "Fast native Rust simulator kernels with zero-dependency Python bindings"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.13,<3.14"
-dependencies = ["numpy>=2.0,<3"]
+dependencies = []
 
 [project.urls]
 Repository = "https://github.com/matterstate/simulators"
@@ -22,8 +22,8 @@ python-source = "."
 [dependency-groups]
 dev = [
     "hegeltest>=0.5",
+    "numpy>=2.0,<3",
     "pytest>=8",
-    "syrupy>=4",
 ]
 reference = [
   "gym-sokoban==0.0.6",

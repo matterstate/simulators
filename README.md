@@ -24,22 +24,18 @@ planning.
 
 ### Python
 
-`matterstate-envs` builds both the Python package and the native `_rs`
-extension in a single wheel via `maturin`:
+`matterstate-envs` builds both the zero-dependency Python package and the
+native `_rs` extension in a single wheel via `maturin`:
 
 ```python
-import numpy as np
-from matterstate_envs import _rs, pointmaze
+from matterstate_envs import pointmaze
 
-# High-level API (step delegates to Rust, reset uses NumPy RNG)
-pos, goal = pointmaze.reset(np.random.default_rng(0), 64)
-pos = pointmaze.step(pos, np.zeros_like(pos, np.float32))
+# Reset and step 64 parallel PointMaze environments in Rust (zero NumPy)
+x, y, gx, gy = pointmaze.reset(64, seed=42)
+nx, ny = pointmaze.step(x, y, [0.5] * 64, [-0.5] * 64)
 
-# Direct Rust batched rollout API (zero Python loop overhead)
-x, y, gx, gy = _rs.pointmaze_reset(42, 64)
-ax = np.zeros(16 * 64, np.float32)
-ay = np.zeros(16 * 64, np.float32)
-traj_x, traj_y = _rs.pointmaze_rollout(16, x, y, ax, ay)
+# Multi-step batched rollout in Rust (zero Python loop overhead)
+tx, ty = pointmaze.rollout(16, x, y, [0.0] * (16 * 64), [0.0] * (16 * 64))
 ```
 
 ### Rust
