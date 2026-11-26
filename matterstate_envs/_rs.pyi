@@ -8,9 +8,9 @@ from numpy.typing import NDArray
 IMG: int
 
 def sokoban_step(
-    boards: NDArray[np.int8],
-    actions: NDArray[np.int32],
-) -> tuple[NDArray[np.int8], NDArray[np.bool_]]: ...
+    grid: NDArray[np.int8],
+    action: int,
+) -> NDArray[np.int8]: ...
 def pointmaze_reset(
     n: int,
     seed: int = 0,
