@@ -73,6 +73,22 @@ def step_obs(
     action: NDArray[np.float32],
     obs: NDArray[np.float32],
 ) -> NDArray[np.float32]:
+    if (
+        _rs is not None
+        and theta.ndim == 2
+        and theta.shape[1] == 2
+        and obs.ndim == 2
+        and obs.shape[1] == 3
+    ):
+        t1 = np.ascontiguousarray(theta[:, 0], dtype=np.float32)
+        t2 = np.ascontiguousarray(theta[:, 1], dtype=np.float32)
+        a1 = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        a2 = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        ox = np.ascontiguousarray(obs[:, 0], dtype=np.float32)
+        oy = np.ascontiguousarray(obs[:, 1], dtype=np.float32)
+        or_ = np.ascontiguousarray(obs[:, 2], dtype=np.float32)
+        _rs.reacher_obs_step_in_place(t1, t2, a1, a2, ox, oy, or_)
+        return np.stack([t1, t2], axis=-1)
     proposed = step(theta, action)
     return np.where(collides(proposed, obs)[:, None], theta, proposed).astype(
         np.float32

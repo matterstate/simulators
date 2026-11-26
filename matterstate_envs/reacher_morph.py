@@ -59,6 +59,13 @@ def tip(
 def step(
     theta: NDArray[np.float32], action: NDArray[np.float32]
 ) -> NDArray[np.float32]:  # joint-velocity control (morphology-independent)
+    if _rs is not None and theta.ndim == 2 and theta.shape[1] == 2:
+        t1 = np.ascontiguousarray(theta[:, 0], dtype=np.float32)
+        t2 = np.ascontiguousarray(theta[:, 1], dtype=np.float32)
+        a1 = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        a2 = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        _rs.reacher_step_in_place(t1, t2, a1, a2)
+        return np.stack([t1, t2], axis=-1)
     th = theta + np.clip(action, -1.0, 1.0) * STEP
     return ((th + np.pi) % (2 * np.pi) - np.pi).astype(np.float32)
 

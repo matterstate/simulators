@@ -31,7 +31,7 @@ extension in a single wheel via `maturin`:
 import numpy as np
 from matterstate_envs import _rs, pointmaze
 
-# NumPy reference API
+# High-level API (step delegates to Rust, reset uses NumPy RNG)
 pos, goal = pointmaze.reset(np.random.default_rng(0), 64)
 pos = pointmaze.step(pos, np.zeros_like(pos, np.float32))
 

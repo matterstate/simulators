@@ -29,7 +29,7 @@
     }),
     'armpush.trajectory': dict({
       'dtype': '<f4',
-      'sha256': '281ff811c775328008636da7fee80ca0bb069c8eba624e94986b39e88291579f',
+      'sha256': '5ecd3734ada74532dd9815340ec7bd5c02587da515ba091771ad2eb1fdd3c2da',
       'shape': list([
         16,
         2,
@@ -54,8 +54,8 @@
       ]),
     }),
     'pointmaze.trajectory': dict({
-      'dtype': '<f8',
-      'sha256': '08aecaf54a0c3b91a0ace008283f9dfce2388268dbd17adc705c1958a40546fd',
+      'dtype': '<f4',
+      'sha256': 'e1acb289bc6d04b77113a9dad5fc8d48ffeb0c3943bbea0cb95b3bab19fce57c',
       'shape': list([
         16,
         8,
@@ -134,7 +134,7 @@
     }),
     'pointpush.trajectory': dict({
       'dtype': '<f4',
-      'sha256': 'e6380b0834f2e30c307f6c5ecc21e014b6f1bd069e47d8ad510237d64dcf008e',
+      'sha256': 'af14960bc05bb305b4b86419aacdf6e5191f27f41800bf8ab1d78d680fa5feaa',
       'shape': list([
         16,
         2,

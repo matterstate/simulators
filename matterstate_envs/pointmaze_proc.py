@@ -99,6 +99,14 @@ def step(
     action: NDArray[np.float32],
     walls: NDArray[np.bool_],
 ) -> NDArray[np.float32]:  # blocked moves stay put (per-maze walls)
+    if _rs is not None and pos.ndim == 2 and pos.shape[1] == 2:
+        x = np.ascontiguousarray(pos[:, 0], dtype=np.float32)
+        y = np.ascontiguousarray(pos[:, 1], dtype=np.float32)
+        ax = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        ay = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        w = np.ascontiguousarray(walls, dtype=np.bool_)
+        _rs.pointmaze_proc_step_in_place(x, y, ax, ay, w)
+        return np.stack([x, y], axis=-1)
     nxt = np.clip(pos + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
     return np.where(in_wall(nxt, walls)[:, None], pos, nxt)
 

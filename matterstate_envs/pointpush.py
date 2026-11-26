@@ -40,6 +40,15 @@ def step(
 ) -> tuple[
     NDArray[np.float32], NDArray[np.float32]
 ]:  # agent,obj,action:(B,2) -> next agent,obj
+    if _rs is not None and agent.ndim == 2 and agent.shape[1] == 2:
+        ax = np.ascontiguousarray(agent[:, 0], dtype=np.float32)
+        ay = np.ascontiguousarray(agent[:, 1], dtype=np.float32)
+        ox = np.ascontiguousarray(obj[:, 0], dtype=np.float32)
+        oy = np.ascontiguousarray(obj[:, 1], dtype=np.float32)
+        ux = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        uy = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        _rs.pointpush_step_in_place(ax, ay, ox, oy, ux, uy)
+        return np.stack([ax, ay], axis=-1), np.stack([ox, oy], axis=-1)
     a = np.clip(agent + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
     d = a - obj
     dist = np.linalg.norm(d, axis=-1, keepdims=True)

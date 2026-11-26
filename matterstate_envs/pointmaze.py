@@ -17,6 +17,11 @@ whole population at once.
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from matterstate_envs import _rs
+except ImportError:
+    _rs = None
+
 # one central wall rising from the floor with a gap at the top → straight line
 # is often blocked, must route over.
 WALLS = np.array(
@@ -44,6 +49,13 @@ def step(
     pos: NDArray[np.float32],
     action: NDArray[np.float32],
 ) -> NDArray[np.float32]:
+    if _rs is not None and pos.ndim == 2 and pos.shape[1] == 2:
+        x = np.ascontiguousarray(pos[:, 0], dtype=np.float32)
+        y = np.ascontiguousarray(pos[:, 1], dtype=np.float32)
+        ax = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        ay = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        _rs.pointmaze_step_in_place(x, y, ax, ay)
+        return np.stack([x, y], axis=-1)
     nxt = np.clip(pos + np.clip(action, -1.0, 1.0) * DT, 0.0, 1.0)
     blocked = in_wall(nxt)
     return np.where(blocked[..., None], pos, nxt)

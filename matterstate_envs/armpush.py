@@ -54,6 +54,15 @@ def step(
     obj: NDArray[np.float32],
     action: NDArray[np.float32],
 ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
+    if _rs is not None and theta.ndim == 2 and theta.shape[1] == 2:
+        t1 = np.ascontiguousarray(theta[:, 0], dtype=np.float32)
+        t2 = np.ascontiguousarray(theta[:, 1], dtype=np.float32)
+        ox = np.ascontiguousarray(obj[:, 0], dtype=np.float32)
+        oy = np.ascontiguousarray(obj[:, 1], dtype=np.float32)
+        a1 = np.ascontiguousarray(action[:, 0], dtype=np.float32)
+        a2 = np.ascontiguousarray(action[:, 1], dtype=np.float32)
+        _rs.armpush_step_in_place(t1, t2, ox, oy, a1, a2)
+        return np.stack([t1, t2], axis=-1), np.stack([ox, oy], axis=-1)
     theta = RE.step(theta, action)
     tip = RE.tip(theta)
     return theta, _contact_push(tip, obj)
